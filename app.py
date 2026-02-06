@@ -3,9 +3,9 @@ import pandas as pd
 import streamlit as st
 import json
 import daft;
-from azure.identity import DefaultAzureCredential
+from azure.identity import ManagedIdentityCredential
 
-credential = DefaultAzureCredential()
+credential = ManagedIdentityCredential()
 accesstoken = credential.get_token("https://storage.azure.com/.default")
 
 df = daft.read_deltalake(

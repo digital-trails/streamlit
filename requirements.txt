@@ -3,4 +3,4 @@ pandas
 pyarrow
 azure-storage-blob
 azure-identity
-daft
+getdaft[deltalake]

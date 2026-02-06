@@ -1,0 +1,5 @@
+streamlit
+pandas
+pyarrow
+azure-storage-blob
+azure-identity

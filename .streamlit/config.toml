@@ -1,0 +1,2 @@
+[server]
+baseUrlPath = "/api/v2/dashboard"

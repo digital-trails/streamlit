@@ -15,6 +15,10 @@ def get_secret(name):
     return client.get_secret(name).value
 
 def check_access():
+    
+    if st.context.headers.get("Sec-Fetch-Dest") in ["script", "style", "font", "image"]:
+        return
+    
     expected = get_secret("container-app-secret")
     if os.getenv("LOCAL_DEV"):
         actual = os.getenv("API_SECRET")

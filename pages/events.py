@@ -18,6 +18,7 @@ def process_event_flows(df):
     return flow_names[["flow_id","pid","date","flow_name"]]
 
 st.title("Events")
+st.write(study)
 
 df = load_data(study)
 flow_names = process_event_flows(df)

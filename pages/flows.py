@@ -27,6 +27,7 @@ def process_flows(df):
     return flow_values[["flow_id","flow_name","name","value"]]
 
 st.title("Flows")
+st.write(study)
 
 df = load_data(study)
 flow_values = process_flows(df)

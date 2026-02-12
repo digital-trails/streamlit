@@ -14,7 +14,6 @@ def get_secret(name):
     client = SecretClient(vault_url="https://trailsvault.vault.azure.net/", credential=credential)
     return client.get_secret(name).value
 
-@st.cache_data(ttl=100)
 def check_access():
     if "token" not in st.session_state:
         token = st.query_params.get("token")

@@ -5,8 +5,8 @@ check_access()
 
 st.set_page_config(page_title="Trails Dashboard", layout="wide")
 
-events = st.Page("pages/events.py", title="Events", icon="📊")
-flows = st.Page("pages/flows.py", title="Flows", icon="🔄")
+events = st.Page("pages/events.py", title="Events")
+flows  = st.Page("pages/flows.py",  title="Flows")
 
-pg = st.navigation([events, flows])
+pg = st.navigation([events, flows], position="top")
 pg.run()

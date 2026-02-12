@@ -5,9 +5,6 @@ from utils import check_access, load_data
 check_access()
 
 study = st.session_state.get("study")
-if not study:
-    st.error("⚠️ No study in session")
-    st.stop()
 
 def process_event_flows(df):
     flows = df[(df["type"]=="Flow")].reset_index(drop=True).copy()
@@ -19,8 +16,7 @@ def process_event_flows(df):
     )
     return flow_names[["flow_id","pid","date","flow_name"]]
 
-st.title("📊 All Events")
-st.write(f"Study: **{study}**")
+st.title("Events")
 
 df = load_data(study)
 flow_names = process_event_flows(df)

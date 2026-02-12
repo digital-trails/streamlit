@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
-from utils import check_access, load_data
+from auth import check_access_admin_only
+from utils import load_data
 
-check_access()
+check_access_admin_only()
 
 study = st.session_state.get("study")
 

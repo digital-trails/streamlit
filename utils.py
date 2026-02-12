@@ -15,37 +15,46 @@ def get_secret(name):
     return client.get_secret(name).value
 
 def check_access():
-     token = st.query_params.get("token")
-     study = st.query_params.get("study")
+    if "token" not in st.session_state:
+        token = st.query_params.get("token")
+        st.session_state.token = token
+    else:
+        token = st.session_state.token
+        
+    if "study" not in st.session_state:
+        study = st.query_params.get("study")
+        st.session_state.study = study
+    else:
+        study = st.session_state.study
      
-     if not token or not study:
+    if not token or not study:
         st.error("🚫 Unauthorized")
         st.stop()
         
-     url = f"https://digital-trails.org/api/v2/roles?resource=study:{study}"
-     headers = { "Authorization": f"Bearer {token}"}
-     
-     try:
-         response = requests.get(url, headers=headers)
-         
-         if response.status_code != 200:
-             st.error(f"Authentication failed: {response.status_code}")
-             st.stop()
+        url = f"https://digital-trails.org/api/v2/roles?resource=study:{study}"
+        headers = { "Authorization": f"Bearer {token}"}
+        
+        try:
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code != 200:
+                st.error(f"Authentication failed: {response.status_code}")
+                st.stop()
 
-         data = response.json()
+            data = response.json()
 
-         roles = data.get("roles", [])
-         if "admin" not in roles:
-             st.error("Access Denied: Admin role required")
-             st.stop()
-         return True
+            roles = data.get("roles", [])
+            if "admin" not in roles:
+                st.error("Access Denied: Admin role required")
+                st.stop()
+            return True
 
-     except requests.exceptions.RequestException as e:
-         st.error(f"API request failed: {str(e)}")
-         st.stop()
-     except Exception as e:
-         st.error(f"Error checking access: {str(e)}")
-         st.stop()
+        except requests.exceptions.RequestException as e:
+            st.error(f"API request failed: {str(e)}")
+            st.stop()
+        except Exception as e:
+            st.error(f"Error checking access: {str(e)}")
+            st.stop()
 
 @st.cache_data(ttl=300)
 def load_data(study):

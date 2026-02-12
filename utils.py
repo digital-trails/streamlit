@@ -1,10 +1,10 @@
 import json
 import pandas as pd
+import requests
 import streamlit as st
 import daft
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-import os
 
 credential = DefaultAzureCredential()
 accesstoken = credential.get_token("https://storage.azure.com/.default")
@@ -15,15 +15,37 @@ def get_secret(name):
     return client.get_secret(name).value
 
 def check_access():
-    expected = get_secret("container-app-secret")
-    if os.getenv("LOCAL_DEV"):
-        actual = os.getenv("API_SECRET")
-    else:
-        actual = st.context.headers.get("x-api-secret")
-    if actual != expected:
+     token = st.query_params.get("token")
+     study = st.query_params.get("study")
+     
+     if not token or not study:
         st.error("🚫 Unauthorized")
         st.stop()
-    return st.context.headers.get("x-user-email", "dev@example.com")
+        
+     url = f"https://digital-trails.org/api/v2/roles?resource=study:{study}"
+     headers = { "Authorization": f"Bearer {token}"}
+     
+     try:
+         response = requests.get(url, headers=headers)
+         
+         if response.status_code != 200:
+             st.error(f"Authentication failed: {response.status_code}")
+             st.stop()
+
+         data = response.json()
+
+         roles = data.get("roles", [])
+         if "admin" not in roles:
+             st.error("Access Denied: Admin role required")
+             st.stop()
+         return True
+
+     except requests.exceptions.RequestException as e:
+         st.error(f"API request failed: {str(e)}")
+         st.stop()
+     except Exception as e:
+         st.error(f"Error checking access: {str(e)}")
+         st.stop()
 
 @st.cache_data(ttl=300)
 def load_data(study):

@@ -20,12 +20,13 @@ def ensure_session_auth() -> tuple[str, str]:
     qp = st.query_params
     qp_token = qp.get("token")
     qp_study = qp.get("study")
-
+    
+    if ("study" not in st.session_state) or (qp_study and st.session_state.get("study") != qp_study):
+        st.cache_data.clear()
+        st.session_state["study"] = qp_study
+        
     if ("token" not in st.session_state) or (qp_token and st.session_state.get("token") != qp_token):
         st.session_state["token"] = qp_token
-
-    if ("study" not in st.session_state) or (qp_study and st.session_state.get("study") != qp_study):
-        st.session_state["study"] = qp_study
 
     token = st.session_state.get("token")
     study = st.session_state.get("study")

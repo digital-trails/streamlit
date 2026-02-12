@@ -12,8 +12,6 @@ accesstoken = credential.get_token("https://storage.azure.com/.default")
 def load_data(study: str):
     study = str(study).strip().lower()
 
-    st.write(f"Loading data for {study}")
-
     df = daft.read_deltalake(
         "abfss://datums@trailsdata.dfs.core.windows.net",
         io_config=daft.io.IOConfig(

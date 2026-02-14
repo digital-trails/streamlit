@@ -15,7 +15,6 @@ def fetch_roles(study: str, token: str) -> list[str]:
     data = resp.json()
     return data.get("roles", [])
 
-
 def ensure_session_auth() -> tuple[str, str]:
     qp = st.query_params
     qp_token = qp.get("token")

@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from auth import check_access_admin_only
-from utils import load_data
+from utils import load_data, completed_flow_values
 
 check_access_admin_only()
 
@@ -28,11 +28,10 @@ def process_flows(df):
 
 st.title("Flows")
 
-df = load_data(study)
-flow_values = process_flows(df)
+flows = completed_flow_values(load_data(study))
 
-for fn in flow_values["flow_name"].drop_duplicates().tolist():
+for fn in flows["flow_name"].drop_duplicates().tolist().sort():
     st.write(f"### {fn}")
-    specific = flow_values[flow_values["flow_name"] == fn]
-    specific = specific.drop_duplicates(["flow_id","name"])
-    st.write(specific.pivot(index=["flow_id"], columns="name", values="value"))
+    flow = flows[flows["flow_name"] == fn]
+    flow = flow.drop_duplicates(["flow_id","name"]).sort_values(["date"])
+    st.write(flow.pivot(index=["code","flow_id","date"], columns="name", values="value"))

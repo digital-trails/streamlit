@@ -2,8 +2,13 @@ import streamlit as st
 
 st.set_page_config(page_title="Trails Dashboard", layout="wide")
 
-events = st.Page("pages/events.py", title="Events")
-flows  = st.Page("pages/flows.py",  title="Flows")
+pages = [
+    st.Page("pages/events.py", title="Events"),
+    st.Page("pages/flows.py", title="Flows")
+]
 
-pg = st.navigation([events, flows], position="top")
+if st.query_params.get("study") == "mtm":
+    pages.append(st.Page("pages/mtm/compliance.py", title="Compliance"))
+
+pg = st.navigation(pages, position="top")
 pg.run()

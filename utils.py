@@ -41,7 +41,7 @@ def load_data(study: str) -> pd.DataFrame:
 
     linking_codes = df[df["type"] == "Link"]
     linking_codes = { r.pid:r.data["Code"] for r in linking_codes.itertuples(index=False) }
-    df["linking_code"] = [ f'{linking_codes.get(r.pid,r.pid[:10]):03}' for r in df.itertuples() ]
+    df["linking_code"] = [ f'{linking_codes.get(r.pid,r.pid[:10])}'.zfill(3) for r in df.itertuples() ]
 
     return df
 

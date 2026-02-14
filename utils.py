@@ -20,19 +20,15 @@ def load_data(study: str) -> pd.DataFrame:
         ),
     )
     df = df.where(df["study"] == study).to_pandas()
-    df["pid"] = df["pid"].astype(str).str[:10]
+    
     df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
 
-    linking_codes = df[df["type"] == "Link"]
-    linking_codes = { r.pid:r.data["Code"] for r in linking_codes.itertuples(index=False) }
-    df["code"] = [ linking_codes.get(r.pid,r.pid[:10]) for r in df.itertuples() ]
-
-    starts = df.groupby("pid", as_index=False)["date"].min().rename(columns={"date": "start_date"})
-
-    df = df.merge(starts, on="pid", how="left")
-    df["start_date"] = pd.to_datetime(df["start_date"].dt.date, errors="coerce")
-    df["rel_date"] = df["date"] - df["start_date"]
-    df["rel_day"] = df["rel_date"].dt.days
+    # I don't think we need this for now.
+    # starts = df.groupby("pid", as_index=False)["date"].min().rename(columns={"date": "start_date"})
+    # df = df.merge(starts, on="pid", how="left")
+    # df["start_date"] = pd.to_datetime(df["start_date"].dt.date, errors="coerce")
+    # df["rel_date"] = df["date"] - df["start_date"]
+    # df["rel_day"] = df["rel_date"].dt.days
 
     def _parse(x):
         if isinstance(x, (dict, list)):
@@ -42,6 +38,10 @@ def load_data(study: str) -> pd.DataFrame:
         except Exception:
             return None
     df["data"] = df["data"].apply(_parse)
+
+    linking_codes = df[df["type"] == "Link"]
+    linking_codes = { r.pid:r.data["Code"] for r in linking_codes.itertuples(index=False) }
+    df["code"] = [ linking_codes.get(r.pid,r.pid[:10]) for r in df.itertuples() ]
 
     return df
 

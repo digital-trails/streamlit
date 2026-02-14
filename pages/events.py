@@ -10,4 +10,4 @@ study = st.session_state.get("study")
 st.title("Events")
 
 flows = completed_flow_values(load_data(study))
-st.scatter_chart(flows[["flow_name","code","date"]].drop_duplicates(), x="date", y="code", color="flow_name")
+st.scatter_chart(flows[["flow_name","linking_code","date"]].drop_duplicates(), x="date", y="linking_code", color="flow_name")

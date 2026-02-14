@@ -30,8 +30,8 @@ st.title("Flows")
 
 flows = completed_flow_values(load_data(study))
 
-for fn in flows["flow_name"].drop_duplicates().tolist().sort():
+for fn in flows["flow_name"].drop_duplicates().sort_values().tolist():
     st.write(f"### {fn}")
     flow = flows[flows["flow_name"] == fn]
     flow = flow.drop_duplicates(["flow_id","name"]).sort_values(["date"])
-    st.write(flow.pivot(index=["code","flow_id","date"], columns="name", values="value"))
+    st.write(flow.pivot(index=["linking_code","flow_id","date"], columns="name", values="value"))

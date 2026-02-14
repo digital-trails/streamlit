@@ -6,17 +6,7 @@ check_access_admin_only()
 
 study = st.session_state.get("study")
 
-def process_event_flows(df):
-    flows = df[(df["type"]=="Flow")].reset_index(drop=True).copy()
-    flows["flow_id"] = flows["data"].apply(lambda d: d.get("flow_id"))
-
-    flow_names = flows[flows["data"].apply(lambda d: d.get("name") == "$RootPath")].copy()
-    flow_names["flow_name"] = flow_names["data"].apply(
-        lambda d: d["value"][d["value"][:-1].rfind("/")+1:].strip("/").replace(".json","")
-    )
-    return flow_names[["flow_id","pid","date","flow_name"]]
-
-st.title("Rising Scores And Compliance")
+#st.title("Rising Scores And Compliance")
 
 flows = completed_flow_values(load_data(study))
 
@@ -41,17 +31,17 @@ for tipe, neuroqol_names in [("Anxiety",anx_names), ("Depression",dep_names)]:
     neuroqol_baseline = neuroqol_elements[neuroqol_elements["flow_name"] == "intro"]
     neuroqol_checkins = neuroqol_elements[neuroqol_elements["flow_name"] != "intro"]
 
-    baselines = neuroqol_baseline.groupby(["pid","date","flow_id"])['value'].apply(nansum).reset_index().rename({"value":"baseline"},axis=1)
-    baselines = baselines.sort_values(["pid","date"]).groupby('pid').head(1) #some users completed intro multiple times, we just take latest
-    baselines = baselines[["pid","baseline"]]
+    baselines = neuroqol_baseline.groupby(["linking_code","date","flow_id"])['value'].apply(nansum).reset_index().rename({"value":"baseline"},axis=1)
+    baselines = baselines.sort_values(["linking_code","date"]).groupby('linking_code').head(1) #some users completed intro multiple times, we just take latest
+    baselines = baselines[["linking_code","baseline"]]
 
-    checkins = neuroqol_checkins.groupby(["pid","flow_id","date"])['value'].apply(nansum).reset_index().rename({"value":"checkin"},axis=1)
+    checkins = neuroqol_checkins.groupby(["linking_code","flow_id","date"])['value'].apply(nansum).reset_index().rename({"value":"checkin"},axis=1)
 
     #these values are coded 0-4 but they should be 1-5 so we add +1 for each of the 8 items
     checkins["checkin"] += 8
     baselines["baseline"] += 8
 
-    checkins_with_baselines = checkins.merge(baselines,on="pid")
+    checkins_with_baselines = checkins.merge(baselines,on="linking_code")
 
     checkins_with_baselines["change"] = [ r.checkin/r.baseline if r.baseline else float('nan') for r in checkins_with_baselines.itertuples()]
     rising_scores = checkins_with_baselines[checkins_with_baselines["change"] >= 1.5].sort_values("date",ascending=False).copy()
@@ -59,5 +49,24 @@ for tipe, neuroqol_names in [("Anxiety",anx_names), ("Depression",dep_names)]:
     rising_scores["increase"] = (rising_scores["change"].round(2)-1).apply('{:.0%}'.format) #percentage format
     rising_scores = rising_scores.sort_values(["date"],ascending=False)
 
-    st.write(f"##{tipe} Rising Score")
-    st.write(rising_scores[["record id", "date", "baseline", "track your progress", "increase"]])
+    st.write(f"## {tipe} Rising Score")
+    st.write(rising_scores[["linking_code", "date", "baseline", "track your progress", "increase"]])
+
+st.write(f"## Compliance")
+
+def index_flow_name(df):
+    typ_index = dict()
+    for r in df.itertuples():
+        if r.flow_name == "intro":
+            yield "intro"
+        if r.flow_name == "track your progress":
+            i = typ_index.get(r.linking_code,1)
+            yield f"track your progress {min(i,4)}"
+            typ_index[r.linking_code] = i+1
+
+compliance_flows = flows[flows['flow_name'].isin(["intro","track your progress"])]
+compliance_flows = compliance_flows[["flow_name","date","linking_code"]].drop_duplicates()
+compliance_flows["flow_name"] = list(index_flow_name(compliance_flows))
+compliance_flows["date"] = compliance_flows["date"].dt.date
+compliance_flows = compliance_flows.sort_values(["linking_code","date","flow_name"]).groupby(['linking_code',"flow_name"]).head(1)
+st.write(compliance_flows.pivot(columns="flow_name",index="linking_code",values="date"))

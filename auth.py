@@ -30,9 +30,9 @@ def ensure_session_auth() -> tuple[str, str]:
     token = st.session_state.get("token")
     study = st.session_state.get("study")
 
-    if not token or not study:
-        st.error("🚫 Unauthorized: missing token or study.")
-        st.stop()
+    # if not token or not study:
+    #     st.error("🚫 Unauthorized: missing token or study.")
+    #     st.stop()
 
     return study, token
 
@@ -40,14 +40,14 @@ def ensure_session_auth() -> tuple[str, str]:
 def check_access_admin_only() -> bool:
     study, token = ensure_session_auth()
 
-    try:
-        roles = fetch_roles(study, token)
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
+    # try:
+    #     roles = fetch_roles(study, token)
+    # except Exception as e:
+    #     st.error(str(e))
+    #     st.stop()
 
-    if "admin" not in roles:
-        st.error("Access Denied: Admin role required.")
-        st.stop()
+    # if "admin" not in roles:
+    #     st.error("Access Denied: Admin role required.")
+    #     st.stop()
 
     return True

@@ -6,10 +6,10 @@ import daft
 from azure.identity import DefaultAzureCredential
 
 credential = DefaultAzureCredential()
-accesstoken = credential.get_token("https://storage.azure.com/.default")
 
 @st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
+    accesstoken = credential.get_token("https://storage.azure.com/.default")
     df = daft.read_deltalake(
         "abfss://datums@trailsdata.dfs.core.windows.net",
         io_config=daft.io.IOConfig(

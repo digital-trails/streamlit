@@ -1,8 +1,7 @@
 # utils.py
 import json
 import pandas as pd
-import streamlit as st
-import daft
+from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
 
 credential = DefaultAzureCredential()
@@ -10,17 +9,21 @@ credential = DefaultAzureCredential()
 #@st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
     accesstoken = credential.get_token("https://storage.azure.com/.default")
-    df = daft.read_deltalake(
-        "abfss://datums@trailsdata.dfs.core.windows.net",
-        io_config=daft.io.IOConfig(
-            azure=daft.io.AzureConfig(
-                storage_account="trailsdata",
-                bearer_token=accesstoken.token,
-            )
-        ),
-    )
-    df = df.where(df["study"] == study).to_pandas()
-    
+    # df = daft.read_deltalake(
+    #     "abfss://datums@trailsdata.dfs.core.windows.net",
+    #     io_config=daft.io.IOConfig(
+    #         azure=daft.io.AzureConfig(
+    #             storage_account="trailsdata",
+    #             bearer_token=accesstoken.token,
+    #         )
+    #     ),
+    # )
+    # df = df.where(df["study"] == study).to_pandas()
+
+    storage_options = {"ACCOUNT_NAME": "trailsdata", "BEARER_TOKEN": accesstoken.token}
+    dt = DeltaTable(f"abfs://datums", storage_options=storage_options)
+    df = dt.to_pandas(partitions=[("study","=",study)])
+
     df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
 
     # I don't think we need this for now.

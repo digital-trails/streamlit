@@ -15,5 +15,7 @@ datums = load_data(study)
 flows = completed_flow_values(datums)[["flow_name","linking_code","date"]].drop_duplicates()
 enrollments = enrollments_as_flows(datums)
 
+st.write(study)
+
 st.title("Events")
 st.scatter_chart(pd.concat([flows,enrollments]), x="date", y="linking_code", color="flow_name")

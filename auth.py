@@ -36,7 +36,6 @@ def ensure_session_auth() -> tuple[str, str]:
 
     return study, token
 
-
 def check_access_admin_only() -> bool:
     study, token = ensure_session_auth()
 

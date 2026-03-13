@@ -16,4 +16,4 @@ flows = completed_flow_values(datums)[["flow_name","linking_code","date"]].drop_
 enrollments = enrollments_as_flows(datums)
 
 st.title("Events")
-st.scatter_chart(pd.concat([flows,datums]), x="date", y="linking_code", color="flow_name")
+st.scatter_chart(pd.concat([flows,enrollments]), x="date", y="linking_code", color="flow_name")

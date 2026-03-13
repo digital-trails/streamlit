@@ -7,7 +7,7 @@ from azure.identity import DefaultAzureCredential
 
 credential = DefaultAzureCredential()
 
-@st.cache_data(ttl=300)
+#@st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
     accesstoken = credential.get_token("https://storage.azure.com/.default")
     df = daft.read_deltalake(

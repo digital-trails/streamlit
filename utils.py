@@ -76,3 +76,8 @@ def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_na
         flows = flows[~flows["name"].str.startswith("$")]
 
     return flows[(~flows["name"].isnull())] if only_named else flows
+
+def consents_as_flows(df: pd.DataFrame):
+    df2 = df[df["type"]=="Consent"].copy()
+    df2["flow_name"] = "consent"
+    return df2[["flow_name","linking_code","date"]]

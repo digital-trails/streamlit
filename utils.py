@@ -5,22 +5,11 @@ import streamlit as st
 from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
 
-credential = DefaultAzureCredential()
 
 @st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
+    credential = DefaultAzureCredential()
     accesstoken = credential.get_token("https://storage.azure.com/.default")
-    # df = daft.read_deltalake(
-    #     "abfss://datums@trailsdata.dfs.core.windows.net",
-    #     io_config=daft.io.IOConfig(
-    #         azure=daft.io.AzureConfig(
-    #             storage_account="trailsdata",
-    #             bearer_token=accesstoken.token,
-    #         )
-    #     ),
-    # )
-    # df = df.where(df["study"] == study).to_pandas()
-
     storage_options = {"ACCOUNT_NAME": "trailsdata", "BEARER_TOKEN": accesstoken.token}
     dt = DeltaTable(f"abfs://datums", storage_options=storage_options)
     df = dt.to_pandas(partitions=[("study","=",study)])
@@ -81,3 +70,11 @@ def consents_as_flows(df: pd.DataFrame):
     df2 = df[df["type"]=="Consent"].copy()
     df2["flow_name"] = "consent"
     return df2[["flow_name","linking_code","date"]]
+
+def to_local_naive(dt, offset_str):
+    from datetime import timezone, timedelta
+    if not offset_str: return dt
+    sign = 1 if offset_str[0] == '+' else -1
+    h, m = map(int, offset_str[1:].split(':'))
+    tz = timezone(timedelta(hours=sign * h, minutes=sign * m))
+    return dt.replace(tzinfo=timezone.utc).astimezone(tz).replace(tzinfo=None)

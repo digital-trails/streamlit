@@ -6,14 +6,14 @@ from utils import load_data, completed_flow_values, consents_as_flows
 check_access_admin_only()
 
 def index_flow_name(df):
-    typ_index = dict()
+    start_times = { r.linking_code: r.date for r in compliance_flows.itertuples() if r.flow_name == "consent" }
     for r in df.itertuples():
         if r.flow_name != "track your progress":
             yield r.flow_name
         else:
-            i = typ_index.get(r.linking_code,1)
+            start_time = start_times[r.linking_code]
+            i = int((r.date-start_time).total_seconds()//(60*60*24*14))
             yield f"track your progress {min(i,4)}"
-            typ_index[r.linking_code] = i+1
 
 study = st.session_state.get("study")
 data = load_data(study)

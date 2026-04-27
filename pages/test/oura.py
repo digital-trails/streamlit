@@ -1,29 +1,35 @@
+import ast
+import json
 import streamlit as st
 import pandas as pd
-import json
 from auth import check_access_admin_only
 from utils import load_data
 
 check_access_admin_only()
 study = st.session_state.get("study")
 
+def safe_parse(raw):
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw)
+    except Exception:
+        return ast.literal_eval(raw)
+
 def parse_oura_rows(df):
-    """Filter Oura IoT rows and parse the nested JSON string."""
     oura = df[
         (df["type"] == "Iot") &
-        (df["data"].apply(lambda d: d.get("did") == "oura"))
+        (df["did"] == "oura")
     ].copy().reset_index(drop=True)
 
     def extract(row):
-        raw = row["data"].get("data")
-        if not raw:
-            return None
         try:
-            parsed = json.loads(raw) if isinstance(raw, str) else raw
-            parsed["_pid"]       = row.get("pid")
-            parsed["_date"]      = row.get("date")
-            parsed["_data_type"] = row["data"].get("data_type", "unknown")
-            return parsed
+            outer = safe_parse(row["data"])
+            inner = safe_parse(outer.get("data", "{}"))
+            inner["_pid"]       = row.get("pid")
+            inner["_date"]      = pd.to_datetime(row.get("ts"), unit="s")
+            inner["_data_type"] = outer.get("data_type", "unknown")
+            return inner
         except Exception:
             return None
 
@@ -51,12 +57,10 @@ selected_pid = st.sidebar.selectbox("Participant", ["All"] + participants)
 if selected_pid != "All":
     df = df[df["_pid"] == selected_pid]
 
-# Drop internal columns for display
 display_cols = [c for c in df.columns if not c.startswith("_")]
 
-st.write(f"**{len(df)} records** — filtered by: `{selected_type}` / `{selected_pid}`")
+st.write(f"**{len(df)} records**")
 
-# Show per data type
 for dt in df["_data_type"].dropna().unique():
     st.write(f"### {dt.replace('_', ' ').title()}")
     subset = df[df["_data_type"] == dt][display_cols + ["_pid", "_date"]]

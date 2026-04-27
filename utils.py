@@ -30,11 +30,22 @@ def load_data(study: str) -> pd.DataFrame:
             return json.loads(x)
         except Exception:
             return None
+    
     df["data"] = df["data"].apply(_parse)
 
     linking_codes = df[df["type"] == "Link"]
     linking_codes = { r.pid:r.data["Code"] for r in linking_codes.itertuples(index=False) }
     df["linking_code"] = [ f'{linking_codes.get(r.pid,r.pid[:10])}'.zfill(3) for r in df.itertuples() ]
+
+    if study == "mtm":
+        dep_names = [f"neuroqol_dep_{i}" for i in range(1,9)]
+        anx_names = [f"neuroqol_anx_{i}" for i in range(1,9)]
+        qol_names = set(dep_names+anx_names)
+
+        for _,row in df.iterrows():
+            if row["data"] and row["data"].get("name") in qol_names:
+                if row["data"]["value"] is not None:
+                    row["data"]["value"] = str(int(row["data"]["value"]) + 1)
 
     return df
 

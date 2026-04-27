@@ -42,8 +42,8 @@ def parse_oura_rows(df):
 
             data_type = outer.get("data_type") or infer_data_type(inner)
 
-            inner["_pid"]       = row.get("pid")
-            inner["_date"]      = pd.to_datetime(row.get("ts"), unit="s")
+            inner["_pid"] = row.get("pid")
+            inner["_date"] = pd.to_datetime(row.get("ts"), unit="s")
             inner["_data_type"] = data_type
             return inner
         except Exception:

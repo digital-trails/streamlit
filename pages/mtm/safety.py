@@ -37,10 +37,6 @@ for tipe, neuroqol_names in [("Anxiety",anx_names), ("Depression",dep_names)]:
 
     checkins = neuroqol_checkins.groupby(["linking_code","flow_id","date"])['value'].apply(nansum).reset_index().rename({"value":"checkin"},axis=1)
 
-    #these values are coded 0-4 but they should be 1-5 so we add +1 for each of the 8 items
-    checkins["checkin"] += 8
-    baselines["baseline"] += 8
-
     checkins_with_baselines = checkins.merge(baselines,on="linking_code")
 
     checkins_with_baselines["change"] = [ r.checkin/r.baseline if r.baseline else float('nan') for r in checkins_with_baselines.itertuples()]

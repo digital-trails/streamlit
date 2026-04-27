@@ -7,6 +7,8 @@ def study_pages(study):
     if study == "mtm":
         yield st.Page("pages/mtm/safety.py", title="Safety")
         yield st.Page("pages/mtm/compliance.py", title="Compliance")
+    if study == "test":
+        yield st.Page("pages/test/oura.py", title="Oura Health Data")
 
 st.set_page_config(page_title="Trails Dashboard", layout="wide")
 

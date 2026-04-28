@@ -30,8 +30,7 @@ def infer_data_type(inner):
 
 def parse_oura_rows(df):
     oura = df[
-        (df["type"] == "Iot") &
-        (df["did"] == "oura")
+        (df["type"] == "oura")
     ].copy().reset_index(drop=True)
 
     def extract(row):

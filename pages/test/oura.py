@@ -11,7 +11,8 @@ def parse_oura_rows(df):
     oura = df[df["type"] == "oura"].copy().reset_index(drop=True)
 
     def extract(row):
-        inner = json.loads(row["data"])
+        raw = row["data"]
+        inner = raw if isinstance(raw, dict) else json.loads(raw)
         return {
             **row.to_dict(),
             **{k: v for k, v in inner.items() if not isinstance(v, (dict, list))},

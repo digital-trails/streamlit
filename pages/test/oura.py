@@ -13,6 +13,7 @@ def parse_oura_rows(df):
     def extract(row):
         inner = json.loads(row["data"])
         return {
+            **row.to_dict(),
             **{k: v for k, v in inner.items() if not isinstance(v, (dict, list))},
             "_pid": row.get("pid"),
             "_date": pd.to_datetime(row.get("ts"), unit="s"),

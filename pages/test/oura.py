@@ -20,40 +20,23 @@ def safe_parse(raw):
         except Exception:
             return {}
 
-def infer_data_type(inner):
-    keys = set(inner.keys())
-    if "activity" in keys: return "workout"
-    if "sleep_phase_5_min" in keys: return "sleep"
-    if "tags" in keys: return "tag"
-    if "score" in keys: return "daily_activity"
-    return "unknown"
-
 def parse_oura_rows(df):
-    oura = df[
-        (df["type"] == "oura")
-    ].copy().reset_index(drop=True)
+    oura = df[df["type"] == "oura"].copy().reset_index(drop=True)
 
     def extract(row):
         try:
-            outer = safe_parse(row["data"])
-            raw_inner = outer.get("data")
-            inner = safe_parse(raw_inner) if raw_inner else outer
-
-            data_type = outer.get("data_type") or infer_data_type(inner)
-
+            inner = safe_parse(row["data"])
             inner["_pid"] = row.get("pid")
             inner["_date"] = pd.to_datetime(row.get("ts"), unit="s")
-            inner["_data_type"] = data_type
+            inner["_data_type"] = row.get("dataType", "unknown")
             return inner
         except Exception:
             return None
 
-    records = [extract(row) for _, row in oura.iterrows()]
-    records = [r for r in records if r is not None]
+    records = [r for r in (extract(row) for _, row in oura.iterrows()) if r is not None]
     return pd.DataFrame(records) if records else pd.DataFrame()
 
 st.title("Oura Health Data")
-
 df_raw = load_data(study)
 df = parse_oura_rows(df_raw)
 
@@ -76,10 +59,6 @@ st.write(f"**{len(df)} records**")
 for dt in sorted(df["_data_type"].dropna().unique()):
     st.write(f"### {dt.replace('_', ' ').title()}")
     subset = df[df["_data_type"] == dt].copy()
-
     subset = subset.dropna(axis=1, how="all")
-
     display_cols = [c for c in subset.columns if not c.startswith("_")]
-    subset = subset[display_cols + ["_pid", "_date"]].sort_values("_date")
-
-    st.dataframe(subset, use_container_width=True)
+    st.dataframe(subset[display_cols + ["_pid", "_date"]].sort_values("_date"), use_container_width=True)

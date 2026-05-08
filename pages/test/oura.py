@@ -8,17 +8,19 @@ check_access_admin_only()
 study = st.session_state.get("study")
 
 def parse_oura_rows(df):
-    oura = df[df["type"] == "oura"].copy().reset_index(drop=True)
+    oura = df[df["type"].str.startswith("oura")].copy().reset_index(drop=True)
 
     def extract(row):
         raw = row["data"]
         inner = raw if isinstance(raw, dict) else json.loads(raw)
+        type_parts = row["type"].split("_", 1)
+        data_type = type_parts[1] if len(type_parts) > 1 else "unknown"
         return {
             **row.to_dict(),
             **{k: v for k, v in inner.items() if not isinstance(v, (dict, list))},
             "_pid": row.get("pid"),
             "_date": pd.to_datetime(row.get("ts"), unit="s"),
-            "_data_type": row.get("dataType", "unknown"),
+            "_data_type": data_type,
         }
 
     records = [extract(row) for _, row in oura.iterrows()]

@@ -1,0 +1,14 @@
+[project]
+name = "streamlit-dash"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "azure-identity>=1.25.3",
+    "azure-storage-blob>=12.29.0",
+    "deltalake>=1.6.0",
+    "pandas>=3.0.3",
+    "pyarrow>=24.0.0",
+    "streamlit>=1.58.0",
+]

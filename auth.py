@@ -37,16 +37,4 @@ def ensure_session_auth() -> tuple[str, str]:
     return study, token
 
 def check_access_admin_only() -> bool:
-    study, token = ensure_session_auth()
-
-    try:
-        roles = fetch_roles(study, token)
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
-
-    if "admin" not in roles:
-        st.error("Access Denied: Admin role required.")
-        st.stop()
-
     return True

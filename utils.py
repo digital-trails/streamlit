@@ -5,14 +5,13 @@ import streamlit as st
 from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
 
-
 @st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
     credential = DefaultAzureCredential()
     accesstoken = credential.get_token("https://storage.azure.com/.default")
-    storage_options = {"ACCOUNT_NAME": "trailsdata", "BEARER_TOKEN": accesstoken.token}
-    dt = DeltaTable(f"abfs://datums", storage_options=storage_options)
-    df = dt.to_pandas(partitions=[("study","=",study)])
+    storage_options = {"ACCOUNT_NAME": "trailsoutputs", "BEARER_TOKEN": accesstoken.token}
+    dt = DeltaTable(f"abfs://{study}/datums", storage_options=storage_options)
+    df = dt.to_pandas()
 
     df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
 

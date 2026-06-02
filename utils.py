@@ -11,6 +11,7 @@ def load_data(study: str) -> pd.DataFrame:
     dt = DeltaTable("./datums")
     df = dt.to_pandas()
     df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
+    df["tz"] = "-04:00"
 
     # I don't think we need this for now.
     # starts = df.groupby("pid", as_index=False)["date"].min().rename(columns={"date": "start_date"})
@@ -85,3 +86,8 @@ def to_local_naive(dt, offset_str):
     h, m = map(int, offset_str[1:].split(':'))
     tz = timezone(timedelta(hours=sign * h, minutes=sign * m))
     return dt.replace(tzinfo=timezone.utc).astimezone(tz).replace(tzinfo=None)
+
+@st.cache_data
+def get_unique_linking_codes(study) -> list:
+    datums = load_data(study)
+    return [_ for _ in datums["linking_code"].drop_duplicates()]

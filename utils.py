@@ -90,4 +90,12 @@ def to_local_naive(dt, offset_str):
 @st.cache_data
 def get_unique_linking_codes(study) -> list:
     datums = load_data(study)
-    return [_ for _ in datums["linking_code"].drop_duplicates()]
+    to_return = [_ for _ in datums["linking_code"].drop_duplicates()]
+
+    try:
+        to_return.remove("abc")
+        to_return.remove("def")
+    except ValueError:
+        return to_return
+
+    return to_return

@@ -16,21 +16,6 @@ def load_data(study: str) -> pd.DataFrame:
 
         df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
 
-        # I don't think we need this for now.
-        # starts = df.groupby("pid", as_index=False)["date"].min().rename(columns={"date": "start_date"})
-        # df = df.merge(starts, on="pid", how="left")
-        # df["start_date"] = pd.to_datetime(df["start_date"].dt.date, errors="coerce")
-        # df["rel_date"] = df["date"] - df["start_date"]
-        # df["rel_day"] = df["rel_date"].dt.days
-
-        def _parse(x):
-            if isinstance(x, (dict, list)):
-                return x
-            try:
-                return json.loads(x)
-            except Exception:
-                return None
-        
         df["data"] = df["data"].apply(_parse)
 
         linking_codes = df[df["type"] == "Link"]
@@ -48,9 +33,12 @@ def load_data(study: str) -> pd.DataFrame:
                         row["data"]["value"] = str(int(row["data"]["value"]) + 1)
         return df
     except:
-        return pd.DataFrame(columns=["pid","did","type","date","data"])
+        return None
 
 def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_named: bool = True, drop_meta: bool = True):
+    
+    if df is None or df.empty: return None
+
     flows = df[df["type"] == "Flow"].copy()
     flows["flow_id"] = flows["data"].apply(lambda d: d.get("flow_id"))
 
@@ -90,3 +78,11 @@ def to_local_naive(dt, offset_str):
     h, m = map(int, offset_str[1:].split(':'))
     tz = timezone(timedelta(hours=sign * h, minutes=sign * m))
     return dt.replace(tzinfo=timezone.utc).astimezone(tz).replace(tzinfo=None)
+
+def _parse(x):
+    if isinstance(x, (dict, list)):
+        return x
+    try:
+        return json.loads(x)
+    except Exception:
+        return None

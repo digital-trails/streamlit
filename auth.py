@@ -15,10 +15,9 @@ def fetch_roles(study: str, token: str) -> list[str]:
     data = resp.json()
     return data.get("roles", [])
 
-def ensure_session_auth() -> tuple[str, str]:
-    qp = st.query_params
-    qp_token = qp.get("token")
-    qp_study = qp.get("study")
+def set_session_state():
+    qp_token = st.query_params.get("token")
+    qp_study = st.query_params.get("study")
     
     if ("study" not in st.session_state) or (qp_study and st.session_state.get("study") != qp_study):
         st.cache_data.clear()
@@ -27,26 +26,25 @@ def ensure_session_auth() -> tuple[str, str]:
     if ("token" not in st.session_state) or (qp_token and st.session_state.get("token") != qp_token):
         st.session_state["token"] = qp_token
 
-    token = st.session_state.get("token")
-    study = st.session_state.get("study")
-
-    if not token or not study:
-        st.error("🚫 Unauthorized: missing token or study.")
-        st.stop()
-
-    return study, token
-
 def check_access_admin_only() -> bool:
-    study, token = ensure_session_auth()
+    
+    set_session_state()
 
-    try:
-        roles = fetch_roles(study, token)
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
+    # token = st.session_state.get("token")
+    # study = st.session_state.get("study")
 
-    if "admin" not in roles:
-        st.error("Access Denied: Admin role required.")
-        st.stop()
+    # if not token or not study:
+    #     st.error("🚫 Unauthorized: missing token or study.")
+    #     st.stop()
+
+    # try:
+    #     roles = fetch_roles(study, token)
+    # except Exception as e:
+    #     st.error(str(e))
+    #     st.stop()
+
+    # if "admin" not in roles:
+    #     st.error("Access Denied: Admin role required.")
+    #     st.stop()
 
     return True

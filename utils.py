@@ -7,46 +7,48 @@ from azure.identity import DefaultAzureCredential
 
 @st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
-    credential = DefaultAzureCredential()
-    accesstoken = credential.get_token("https://storage.azure.com/.default")
-    storage_options = {"ACCOUNT_NAME": "trailsoutputs", "BEARER_TOKEN": accesstoken.token}
-    dt = DeltaTable(f"abfs://{study}/datums", storage_options=storage_options)
-    df = dt.to_pandas()
+    try:
+        credential = DefaultAzureCredential()
+        accesstoken = credential.get_token("https://storage.azure.com/.default")
+        storage_options = {"ACCOUNT_NAME": "trailsoutputs", "BEARER_TOKEN": accesstoken.token}
+        dt = DeltaTable(f"abfs://{study}/datums", storage_options=storage_options)
+        df = dt.to_pandas()
 
-    df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
+        df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
 
-    # I don't think we need this for now.
-    # starts = df.groupby("pid", as_index=False)["date"].min().rename(columns={"date": "start_date"})
-    # df = df.merge(starts, on="pid", how="left")
-    # df["start_date"] = pd.to_datetime(df["start_date"].dt.date, errors="coerce")
-    # df["rel_date"] = df["date"] - df["start_date"]
-    # df["rel_day"] = df["rel_date"].dt.days
+        # I don't think we need this for now.
+        # starts = df.groupby("pid", as_index=False)["date"].min().rename(columns={"date": "start_date"})
+        # df = df.merge(starts, on="pid", how="left")
+        # df["start_date"] = pd.to_datetime(df["start_date"].dt.date, errors="coerce")
+        # df["rel_date"] = df["date"] - df["start_date"]
+        # df["rel_day"] = df["rel_date"].dt.days
 
-    def _parse(x):
-        if isinstance(x, (dict, list)):
-            return x
-        try:
-            return json.loads(x)
-        except Exception:
-            return None
-    
-    df["data"] = df["data"].apply(_parse)
+        def _parse(x):
+            if isinstance(x, (dict, list)):
+                return x
+            try:
+                return json.loads(x)
+            except Exception:
+                return None
+        
+        df["data"] = df["data"].apply(_parse)
 
-    linking_codes = df[df["type"] == "Link"]
-    linking_codes = { r.pid:r.data["Code"] for r in linking_codes.itertuples(index=False) }
-    df["linking_code"] = [ f'{linking_codes.get(r.pid,r.pid[:10])}'.zfill(3) for r in df.itertuples() ]
+        linking_codes = df[df["type"] == "Link"]
+        linking_codes = { r.pid:r.data["Code"] for r in linking_codes.itertuples(index=False) }
+        df["linking_code"] = [ f'{linking_codes.get(r.pid,r.pid[:10])}'.zfill(3) for r in df.itertuples() ]
 
-    if study == "mtm":
-        dep_names = [f"neuroqol_dep_{i}" for i in range(1,9)]
-        anx_names = [f"neuroqol_anx_{i}" for i in range(1,9)]
-        qol_names = set(dep_names+anx_names)
+        if study == "mtm":
+            dep_names = [f"neuroqol_dep_{i}" for i in range(1,9)]
+            anx_names = [f"neuroqol_anx_{i}" for i in range(1,9)]
+            qol_names = set(dep_names+anx_names)
 
-        for _,row in df.iterrows():
-            if row["data"] and row["data"].get("name") in qol_names:
-                if row["data"]["value"] is not None:
-                    row["data"]["value"] = str(int(row["data"]["value"]) + 1)
-
-    return df
+            for _,row in df.iterrows():
+                if row["data"] and row["data"].get("name") in qol_names:
+                    if row["data"]["value"] is not None:
+                        row["data"]["value"] = str(int(row["data"]["value"]) + 1)
+        return df
+    except:
+        return pd.DataFrame(columns=["pid","did","type","date","data"])
 
 def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_named: bool = True, drop_meta: bool = True):
     flows = df[df["type"] == "Flow"].copy()

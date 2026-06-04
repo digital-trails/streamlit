@@ -17,9 +17,9 @@ st.title("Events")
 
 all_linking_codes = get_unique_linking_codes(study)
 with st.container(border=True):
-    selected_linking_codes = st.multiselect("Linking Codes", all_linking_codes, default=all_linking_codes)
-    print(selected_linking_codes)
-if selected_linking_codes != []:
+    selected_linking_codes = st.multiselect("Linking Codes", all_linking_codes, default=None)
+    
+if selected_linking_codes is not None and len(selected_linking_codes)>0:
     flows = all_flows[all_flows["linking_code"].isin(selected_linking_codes)]
     st.scatter_chart(pd.concat([flows, consents]), x="date",y="linking_code",color="flow_name")
 else:    

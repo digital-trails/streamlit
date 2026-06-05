@@ -125,7 +125,10 @@ for fn in flows["flow_name"].drop_duplicates().sort_values().tolist():
 
         form.form_submit_button(label="Generate Chart")
 
-        if len(surveys_selections) != 2:
+        if selected_participant is None:
+            form.error("No participant selected")
+
+        elif len(surveys_selections) != 2:
             form.error("You must select two surveys to compare")
             
         else:
@@ -137,5 +140,6 @@ for fn in flows["flow_name"].drop_duplicates().sort_values().tolist():
                 st.error(f"No data found for either *track your progress {surveys_selections[0]}* or *track your progress {surveys_selections[1]}* for participant with linking code {selected_participant}")
 
             else:
+                st.info(body="The chart is interactive! Try scrolling and dragging to adjust your view", icon=":material/info:")
                 st.write(f"### Displaying chart for typ{surveys_selections[1]}-typ{surveys_selections[0]}")
                 st.bar_chart(chart_data, x="name",y="value")    

@@ -15,8 +15,12 @@ st.set_page_config(page_title="Trails Dashboard", layout="wide")
 pages = [
     st.Page("pages/events.py", title="Events"),
     st.Page("pages/surveys.py", title="Surveys"),
-    *study_pages(get_study())
+    *study_pages(get_study()),
+    st.Page("pages/agent.py", title="Agent")
 ]
 
 pg = st.navigation(pages, position="top")
-pg.run()
+
+if __name__ == "__main__":
+    pg.run()
+    print("server running")

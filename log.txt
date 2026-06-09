@@ -1,0 +1,198 @@
+
+1781033161.5368235 event SQL Query generated: 
+SELECT study, pid, did, ts FROM deltatable ORDER BY ts DESC LIMIT 10
+
+
+1781033170.682158 event SQL Query generated: 
+SELECT * FROM deltatable ORDER BY ts DESC LIMIT 10
+
+
+1781033288.1255116 event SQL Query generated: 
+SELECT * FROM deltable WHERE pid = 'user_3EJmbpY' ORDER BY ts DESC LIMIT 50
+
+
+1781033288.1307764 event SQL query failed: 
+SELECT * FROM deltable WHERE pid = 'user_3EJmbpY' ORDER BY ts DESC LIMIT 50
+
+
+1781033288.1342568 event Error: 
+Error during planning: table 'datafusion.public.deltable' not found
+
+
+1781033292.722572 event SQL Query generated: 
+SELECT * FROM deltable WHERE pid = '3EJmbpY' ORDER BY ts DESC LIMIT 50
+
+
+1781033292.7267087 event SQL query failed: 
+SELECT * FROM deltable WHERE pid = '3EJmbpY' ORDER BY ts DESC LIMIT 50
+
+
+1781033292.7301266 event Error: 
+Error during planning: table 'datafusion.public.deltable' not found
+
+
+1781033299.786388 event SQL Query generated: 
+SELECT pid, COUNT(*) as cnt FROM deltable GROUP BY pid ORDER BY cnt DESC LIMIT 10
+
+
+1781033299.7981174 event SQL query failed: 
+SELECT pid, COUNT(*) as cnt FROM deltable GROUP BY pid ORDER BY cnt DESC LIMIT 10
+
+
+1781033299.8011236 event Error: 
+Error during planning: table 'datafusion.public.deltable' not found
+
+
+1781033974.6989021 event SQL Query generated: 
+SELECT SELECT * FROM deltatable WHERE pid = '3EJmbpY' ORDER BY ts ASC LIMIT 100 FROM deltatable 
+
+WHERE study='arro3.294' OR study IS NOT NULL
+
+
+
+1781033974.7036796 event SQL query failed: 
+SELECT SELECT * FROM deltatable WHERE pid = '3EJmbpY' ORDER BY ts ASC LIMIT 100 FROM deltatable 
+
+WHERE study='arro3.294' OR study IS NOT NULL
+
+
+
+1781033974.7072034 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 81")
+
+
+1781033981.3020535 event SQL Query generated: 
+SELECT * FROM deltatable WHERE pid='3EJmbpY' ORDER BY ts ASC LIMIT 100
+
+
+1781033987.7389193 event SQL Query generated: 
+SELECT pid, count(*) as cnt FROM deltatable WHERE pid='3EJmbpY'
+
+
+1781033987.761148 event SQL query failed: 
+SELECT pid, count(*) as cnt FROM deltatable WHERE pid='3EJmbpY'
+
+
+1781033987.7647007 event Error: 
+Error during planning: Column in SELECT must be in GROUP BY or an aggregate function: While expanding wildcard, column "deltatable.pid" must appear in the GROUP BY clause or must be part of an aggregate function, currently only "count(Int64(1))" appears in the SELECT clause satisfies this requirement
+
+
+1781033995.388366 event SQL Query generated: 
+SELECT * FROM deltatable  FROM deltatable WHERE pid='3EJmbpY' ORDER BY ts ASC LIMIT 50
+
+
+
+
+1781033995.3946655 event SQL query failed: 
+SELECT * FROM deltatable  FROM deltatable WHERE pid='3EJmbpY' ORDER BY ts ASC LIMIT 50
+
+
+
+
+1781033995.3978117 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 27")
+
+
+1781034016.931293 event SQL Query generated: 
+SELECT * FROM deltatable WHERE pid LIKE 'user_%' ORDER BY ts DESC LIMIT 20
+
+
+
+
+1781034071.6652093 event SQL Query generated: 
+SELECT * WHERE pid = '3EJmbpY' ORDER BY ts DESC LIMIT 100 FROM deltatable 
+
+
+
+1781034071.6705632 event SQL query failed: 
+SELECT * WHERE pid = '3EJmbpY' ORDER BY ts DESC LIMIT 100 FROM deltatable 
+
+
+
+1781034071.6742353 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 59")
+
+
+1781034081.079134 event SQL Query generated: 
+SELECT * ORDER BY ts DESC LIMIT 100 FROM deltatable WHERE pid = '3EJmbpY'
+
+
+1781034081.0830684 event SQL query failed: 
+SELECT * ORDER BY ts DESC LIMIT 100 FROM deltatable WHERE pid = '3EJmbpY'
+
+
+1781034081.0857284 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 37")
+
+
+1781034088.8230226 event SQL Query generated: 
+SELECT * FROM deltatable WHERE pid IN ('3EJmbpY')
+
+
+1781034264.321946 event SQL Query generated: 
+SELECT study, did, ts, tz, type, data FROM deltatable WHERE pid='user_3EJmbpY' ORDER BY ts DESC LIMIT 50
+
+
+1781034433.903025 event SQL Query generated: 
+SELECT * FROM deltatable WHERE pid LIKE '%3%' LIMIT 20
+
+
+1781034443.7700257 event SQL Query generated: 
+SELECT ts, data, tz, pid FROM deltatable WHERE pid LIKE '%3%' ORDER BY ts DESC LIMIT 100
+
+
+1781034617.7855709 event Delta schema accessed: 
+
+
+
+1781034624.5959086 event SQL Query generated: 
+SELECT pid, did, ts, type, data FROM deltatable WHERE pid LIKE '%3%' ORDER BY pid LIMIT 100
+
+
+1781034691.8023117 event Delta schema accessed: 
+
+
+
+1781034700.5283391 event SQL Query generated: 
+SELECT pid, data, ts, type FROM deltatable WHERE pid like '%3%' FROM deltatable 
+
+
+1781034700.5324688 event SQL query failed: 
+SELECT pid, data, ts, type FROM deltatable WHERE pid like '%3%' FROM deltatable 
+
+
+1781034700.5348732 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 65")
+
+
+1781034709.6834111 event SQL Query generated: 
+SELECT pid, data, ts, type WHERE pid like '%3%' FROM deltatable 
+
+
+1781034709.687321 event SQL query failed: 
+SELECT pid, data, ts, type WHERE pid like '%3%' FROM deltatable 
+
+
+1781034709.689673 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 49")
+
+
+1781034718.345874 event SQL Query generated: 
+SELECT pid, data, ts, type WHERE pid like '%3%' and study = 'arro3.core.DataType<Utf8>' FROM deltatable 
+
+
+1781034718.35177 event SQL query failed: 
+SELECT pid, data, ts, type WHERE pid like '%3%' and study = 'arro3.core.DataType<Utf8>' FROM deltatable 
+
+
+1781034718.3561542 event Error: 
+SQL error: ParserError("Expected: end of statement, found: FROM at Line: 1, Column: 89")
+
+
+1781034802.6376112 event Delta schema accessed: 
+
+
+
+1781034807.672876 event SQL Query generated: 
+SELECT study,pid,ts,type,data FROM deltatable WHERE pid LIKE '%3%' ORDER BY ts DESC LIMIT 100
+

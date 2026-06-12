@@ -7,6 +7,10 @@ from utils import load_model, load_raw_data, load_data
 import pandas as pd
 import pages.tool_params
 import duckdb
+import asyncio
+
+prompt = st.text_input(label="Ask an LLM questions about your data", max_chars=4096, value=None, placeholder="Share insights about xyz...")
+output_box = st.empty()
 
 model_name="kimi-k2.6"
 
@@ -20,7 +24,6 @@ dt = load_raw_data(study)
 deltalake_agent = Agent(  
   model,
   output_type=str,
-  deps_type=str,
   retries=2,
   instructions=(
 """ 
@@ -57,16 +60,14 @@ def get_delta_schema() -> str:
     fields = {field.name: str(field.type) for field in schema}
     return json.dumps(fields, indent=2)
 
-@deltalake_agent.tool()
-async def execute_sql_query(ctx: RunContext[str], params: pages.tool_params.ExecuteDeltaQueryParams) -> str:
+@deltalake_agent.tool_plain()
+async def execute_sql_query(params: pages.tool_params.ExecuteDeltaQueryParams) -> str:
     """
     Executes a SQL query against a delta table via DuckDB and returns
     a compact JSON string safe to pass back as a tool result.
     """
 
     mylog.log("SQL Query Tool Accessed", f"query: {params.sql}")
-
-    ctx.validation_context
 
     dataset = dt.to_pyarrow_dataset()
 
@@ -138,19 +139,22 @@ async def query_table_size(table_path : str = "datums") -> int:
         return -1
 
 
-prompt = st.text_input(label="Ask an LLM questions about your data", max_chars=4096, value=None, placeholder="Share insights about xyz...")
 
-output = ""
+async def run_agent(prompt: str):
+  async with deltalake_agent.run_stream(user_prompt=prompt) as result:  
+      async for message in result.stream_text():  
+          output_box.markdown(message)
 
 if prompt!=None:
     mylog.log("------------------- START AGENT RUN -------------------------")
-    with st.spinner(text="Searching database...", show_time = True):
+    with st.spinner(text="Working...", show_time = True):
 
         # try:
-        output = deltalake_agent.run_sync(user_prompt=prompt, deps="If you see this text please include the word 'ephemerally' in your output").output
+        output = asyncio.run(run_agent(prompt=prompt))
         # except:
         #     ModelRetry(
         #         message='Requested too much data from tool `execute_delta_query`. Try again with a smaller `limit` value.s'
         #     )
 
-st.markdown(output)
+
+

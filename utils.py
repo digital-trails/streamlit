@@ -79,6 +79,8 @@ def load_model(name : str = "KimiK2.6") -> Model:
                 ),
             settings = {
                 "thinking" : True,
+                "max_tokens" : 3000,
+                "temperature" : 0.05
                 }
         )
 

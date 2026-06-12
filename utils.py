@@ -4,11 +4,20 @@ import pandas as pd
 import streamlit as st
 from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
+from pydantic_ai.models import Model
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.azure import AzureProvider
+from os import getenv
 
 
 @st.cache_data(ttl=300)
 def load_data(study: str) -> pd.DataFrame:
-    dt = DeltaTable("./datums")
+    credential = DefaultAzureCredential()
+    accesstoken = credential.get_token("https://storage.azure.com/.default")
+    storage_options = {"ACCOUNT_NAME": "trailsoutputs", "BEARER_TOKEN": accesstoken.token}
+
+    dt = DeltaTable(f"abfs://{study}/datums", storage_options=storage_options)
+
     df = dt.to_pandas()
     df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
     df["tz"] = "-04:00"
@@ -45,6 +54,44 @@ def load_data(study: str) -> pd.DataFrame:
                     row["data"]["value"] = str(int(row["data"]["value"]) + 1)
 
     return df
+
+def load_raw_data(study: str) -> DeltaTable:
+    credential = DefaultAzureCredential()
+    accesstoken = credential.get_token("https://storage.azure.com/.default")
+    storage_options = {"ACCOUNT_NAME": "trailsoutputs", "BEARER_TOKEN": accesstoken.token}
+
+    return DeltaTable(f"abfs://{study}/datums", storage_options=storage_options)
+
+@st.cache_resource
+def load_model(name : str = "Kimi-K2.6") -> Model:
+    endpoint = getenv("ENDPOINT")
+    token = getenv("API_KEY")
+
+    if name.lower() == "kimi-k2.6":
+        return OpenAIChatModel(
+            'Kimi-K2.6', 
+            provider = AzureProvider(
+                azure_endpoint=endpoint,
+                api_key=token
+                ),
+            settings = {
+                "thinking" : True,
+                }
+        )
+
+    if name.lower() == "chatgpt":
+        return OpenAIChatModel(
+            'gpt-chat-latest',
+            provider = AzureProvider(
+                azure_endpoint=endpoint,
+                api_key=token
+                ),
+            settings = {
+                "thinking" : True,
+                }
+        )
+    
+    raise Exception("Typo in model name. Can be kimi-k2.6 or chatgpt")
 
 def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_named: bool = True, drop_meta: bool = True):
     flows = df[df["type"] == "Flow"].copy()

@@ -7,7 +7,7 @@ class Logger:
     def log(self, event: str, description: str = ""):
         with open(self.path,'at') as logfile:
             logfile.write(f"""
-{time.time()} event {event}: 
+{time.time()} {event}: 
 {description}
 
 """)

@@ -1,4 +1,7 @@
 import streamlit as st
+from dotenv import load_dotenv
+
+load_dotenv('keys.env')
 
 def get_study():
     return st.query_params.get("study") or st.session_state.get("study")

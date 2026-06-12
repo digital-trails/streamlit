@@ -3,9 +3,7 @@ import pandas as pd
 from auth import check_access_admin_only
 from utils import load_data, completed_flow_values, consents_as_flows, to_local_naive, get_unique_linking_codes
 
-check_access_admin_only()
-
-study = st.session_state.get("study")
+study = "mtm-t2"
 datums = load_data(study)
 datums["date"] = datums.apply(lambda r: to_local_naive(r['date'], r['tz']), axis=1)
 

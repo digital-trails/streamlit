@@ -5,8 +5,6 @@ from utils import load_data, completed_flow_values, get_unique_linking_codes
 import matplotlib.pyplot as plt
 import time
 
-check_access_admin_only()
-
 study = st.session_state.get("study")
 def process_flows(df):
     flows = df[(df["type"]=="Flow")].reset_index(drop=True).copy()
@@ -60,6 +58,9 @@ def create_typ_diff_chart(flows: pd.DataFrame, first: int, second: int, particip
 
                 typ2 = typ2["value"].astype(int).reset_index().drop("index", axis=1)
                 typ1 = typ1["value"].astype(int).reset_index().drop("index", axis=1)
+
+                typ2 = typ2[typ2["value"] != 99]
+                typ1 = typ1[typ1["value"] != 99]
 
                 difference_values = typ1.subtract(typ2)
 

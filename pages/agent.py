@@ -1,4 +1,4 @@
-from pydantic_ai import Agent, ModelRetry, ModelHTTPError
+from pydantic_ai import Agent, ModelRetry, ModelHTTPError, RunContext, UsageLimits
 import streamlit as st
 from deltalake import QueryBuilder
 from pages.logger import Logger
@@ -6,11 +6,13 @@ import json
 from utils import load_model, load_raw_data, load_data
 import pandas as pd
 
-mylog = Logger("log.txt")
+model_name="kimi-k2.6"
+
+mylog = Logger("log.txt", model=model_name)
 
 study = "mtm-t2"
 
-model = load_model("kimi-k2.6")
+model = load_model(model_name)
 dt = load_raw_data(study)
 
 deltalake_agent = Agent(  
@@ -53,18 +55,17 @@ def get_delta_schema() -> str:
     fields = {field.name: str(field.type) for field in schema}
     return json.dumps(fields, indent=2)
 
-@deltalake_agent.tool_plain(retries=2, docstring_format='google')
-async def execute_delta_query(dnf_filter: list = [], columns : list[str] = [], limit: int=50):
+@deltalake_agent.tool(retries=2, docstring_format='google')
+async def execute_delta_query(ctx: RunContext[str], query: str = "", columns : list[str] = [], limit: int=50):
     """
     Query delta table
 
     Tool to retrieve specific data from Delta Table using SQL queries
 
     Args:
-        dnf_filter (str) : Disjunctive Normal Form filter. A list of tuples is equivalent to an AND, and a list of lists is equivalent to an OR. Should be in this form: [('column_name','operation','value')]. Supported operators: =, !=, <, <=, >, >=, in, not in
+        query (str) : Conditions by which to filter the data. May use boolean expressions. Omit to return all. Example: "did == 'y3s+EgxdDQ4Ib82M8cOsMQ==' or type == 'Flow'"
         columns (list[str]) : Specific columns to return. Use schema tool to get proper column names. Omit to return all.
-        aggregate (numpy function): A numpy function to use for aggregation. Form: 'np.[function_name]'
-        limit (int) : Max rows to return, default 50
+        limit (int) : Max rows to return, default 50. Cannot be >200
 
     Returns:
         json formatted query response
@@ -73,38 +74,34 @@ async def execute_delta_query(dnf_filter: list = [], columns : list[str] = [], l
     datums = load_data(study)
 
     mylog.log("Execute Delta Query accessed")
-
-    # def _timestamp_converter(seconds):
-    #     ts = time.localtime(seconds)
-
-    #     weekdays = "Monday Tuesday Wednesday Thursday Friday Saturday Sunday".split(" ")
-        
-    #     return f"{weekdays[ts.tm_wday]} {ts.tm_year}-{ts.tm_mon}-{ts.tm_mday} {ts.tm_hour}:{ts.tm_min}:{ts.tm_sec}"
     
     try:
         datums.filter(items=columns)
+
+        if query!="":
+            datums.query(expr=query)
 
     except ValueError as e:
         mylog.log("Error: ", str(e))
 
         ModelRetry(
-            message='Invalid DNF filter. Check your formatting and try again'
+            message=f'Error: {e}. Invalid column names. Check your formatting and try again'
         )
-
-    # if aggregate!="":
-    #     result = df.agg(aggregate)
-    #     return result.head(limit if limit<=200 else 200).to_json(orient="records", date_format="iso")
     
-    df = df.head(limit if limit <= 200 else 200)
+    except Exception as e:
+        mylog.log("Error: ", str(e))
+
+        ModelRetry(message=f'Error: {e}. This is likely a problem with your query')
+    
+    df = datums.head(limit if limit <= 200 else 200)
 
     return df.to_json(orient="records", date_format="iso")
     
 
-# From ChatGPT: One limitation: the table access method available does not support sorting/grouping directly, so I can identify the first two registrants and summarize the records retrieved, but I cannot reliably reconstruct every event for each participant without additional queries.
-@deltalake_agent.tool_plain
+@deltalake_agent.tool_plain(retries=5)
 def get_range_from_table(start: int, end: int) -> str:
     """
-    Read specified rows from a Delta table
+    Read specified rows from a Delta table. Difference between start and end cannot exceed 500
 
     Params:
         start (int): An inclusive start index
@@ -112,6 +109,9 @@ def get_range_from_table(start: int, end: int) -> str:
     """
 
     mylog.log("Get range tool accessed", f"start={start}, end={end}")
+
+    if(end-start>500):
+        raise ModelRetry(f"Difference between start and end index cannot excceed 500, but {end}-{start}={end-start}")
 
     try:
         df = dt.to_pandas().iloc[start:end]

@@ -3,10 +3,13 @@ import json
 import pandas as pd
 import streamlit as st
 from deltalake import DeltaTable
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.azure import AzureProvider
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
+from anthropic import AsyncAnthropicFoundry
 from os import getenv
 
 
@@ -63,7 +66,7 @@ def load_raw_data(study: str) -> DeltaTable:
     return DeltaTable(f"abfs://{study}/datums", storage_options=storage_options)
 
 @st.cache_resource
-def load_model(name : str = "Kimi-K2.6") -> Model:
+def load_model(name : str = "KimiK2.6") -> Model:
     endpoint = getenv("ENDPOINT")
     token = getenv("API_KEY")
 
@@ -79,7 +82,7 @@ def load_model(name : str = "Kimi-K2.6") -> Model:
                 }
         )
 
-    if name.lower() == "chatgpt":
+    elif name.lower() == "chatgpt":
         return OpenAIChatModel(
             'gpt-chat-latest',
             provider = AzureProvider(
@@ -91,7 +94,20 @@ def load_model(name : str = "Kimi-K2.6") -> Model:
                 }
         )
     
-    raise Exception("Typo in model name. Can be kimi-k2.6 or chatgpt")
+    elif name.lower() == "claude":
+        foundry_client = AsyncAnthropicFoundry(
+            api_key=token,
+            base_url="https://dashboard-eastus2-resource.services.ai.azure.com/anthropic"
+        )
+
+        return AnthropicModel(
+            'claude-opus-4-8',
+            provider = AnthropicProvider(anthropic_client=foundry_client)
+        )
+
+
+    else:
+        raise Exception("Invalid model name. Available models are kimi-k2.6, chatgpt, or claude")
 
 def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_named: bool = True, drop_meta: bool = True):
     flows = df[df["type"] == "Flow"].copy()

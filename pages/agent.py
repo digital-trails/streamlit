@@ -5,6 +5,8 @@ from pages.logger import Logger
 import json
 from utils import load_model, load_raw_data, load_data
 import pandas as pd
+import pages.tool_params
+import duckdb
 
 model_name="kimi-k2.6"
 
@@ -37,7 +39,7 @@ depending on the study, and have varying subject matter. Provide insights that w
 - If a user asks about a range of data in the table, use the 'get_range_from_table' tool
 - If a user asks about recent trends in the data, use the 'get_range_from_table' tool to access the previous 100 entries
 - If the user asks for data and does not specify a range, use the 'execute_delta_query' tool to select specific data
-- ALWAYS use the 'get_delta_schema' tool before writing a SQL query
+- ALWAYS use the 'get_delta_schema' tool before writing a query
 - Do not specify that you are looking at the response from a tool. Simply act as though you have all the knowledge of the data
     stored in memory
 - However, If you recieve a response from a tool that begins with 'ERROR', -1, or None, you MUST let the user know that you had problems accessing the data
@@ -55,48 +57,49 @@ def get_delta_schema() -> str:
     fields = {field.name: str(field.type) for field in schema}
     return json.dumps(fields, indent=2)
 
-@deltalake_agent.tool(retries=2, docstring_format='google')
-async def execute_delta_query(ctx: RunContext[str], query: str = "", columns : list[str] = [], limit: int=50):
+@deltalake_agent.tool()
+async def execute_sql_query(ctx: RunContext[str], params: pages.tool_params.ExecuteDeltaQueryParams) -> str:
     """
-    Query delta table
-
-    Tool to retrieve specific data from Delta Table using SQL queries
-
-    Args:
-        query (str) : Conditions by which to filter the data. May use boolean expressions. Omit to return all. Example: "did == 'y3s+EgxdDQ4Ib82M8cOsMQ==' or type == 'Flow'"
-        columns (list[str]) : Specific columns to return. Use schema tool to get proper column names. Omit to return all.
-        limit (int) : Max rows to return, default 50. Cannot be >200
-
-    Returns:
-        json formatted query response
+    Executes a SQL query against a delta table via DuckDB and returns
+    a compact JSON string safe to pass back as a tool result.
     """
 
-    datums = load_data(study)
+    mylog.log("SQL Query Tool Accessed", f"query: {params.sql}")
 
-    mylog.log("Execute Delta Query accessed")
-    
-    try:
-        datums.filter(items=columns)
+    ctx.validation_context
 
-        if query!="":
-            datums.query(expr=query)
+    dataset = dt.to_pyarrow_dataset()
 
-    except ValueError as e:
-        mylog.log("Error: ", str(e))
-
-        ModelRetry(
-            message=f'Error: {e}. Invalid column names. Check your formatting and try again'
+    # Inject the delta table as 'tbl' and enforce the row limit
+    wrapped_sql = f"""
+        WITH tbl AS (
+            SELECT * FROM dataset
         )
+        SELECT * FROM ({params.sql}) AS _query
+        LIMIT {params.limit}
+    """
     
-    except Exception as e:
-        mylog.log("Error: ", str(e))
 
-        ModelRetry(message=f'Error: {e}. This is likely a problem with your query')
-    
-    df = datums.head(limit if limit <= 200 else 200)
+    try:
+        con = duckdb.connect()
+        df: pd.DataFrame = con.execute(wrapped_sql).df()
 
-    return df.to_json(orient="records", date_format="iso")
+    except duckdb.Error as e:
+        mylog.log("Error: ", f"{str(e)}. Query was: {params.sql}")
+        return json.dumps({"error": str(e)})
     
+    finally:
+        con.close()
+
+    if df.empty:
+        return "Empty dataframe"
+
+    return df.to_json(
+        orient="records",
+        date_format="iso",
+        double_precision=4,
+    )
+
 
 @deltalake_agent.tool_plain(retries=5)
 def get_range_from_table(start: int, end: int) -> str:

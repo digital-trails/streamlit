@@ -1,4 +1,4 @@
-name: Build and Deploy to Azure
+name: Build and Deploy to trailstestcontainerapp2
 
 on:
   workflow_dispatch:
@@ -20,11 +20,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to ACR
-        run: az acr login --name trailscontainerregistry
+        run: az acr login --name trailstestcontainerapp2
 
       - name: Deploy to Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
           containerAppName: trailstestcontainerapp2
-          resourceGroup: digital-trails
+          resourceGroup: test
           imageToDeploy: trailscontainerregistry.azurecr.io/streamlit:${{ github.sha }}

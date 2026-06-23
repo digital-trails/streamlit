@@ -1,4 +1,4 @@
-name: Build and Deploy to trailstestcontainerapp2
+name: Build and Deploy to Test Registry 2
 
 on:
   workflow_dispatch:

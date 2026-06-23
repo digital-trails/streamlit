@@ -18,7 +18,12 @@ WORKDIR /app
 
 ENV PYTHONPATH=/packages \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    # Installed via `pip install --target`, so Streamlit can't detect a normal
+    # site-packages install and would default to development mode (which rejects
+    # --server.port). Force it off.
+    STREAMLIT_GLOBAL_DEVELOPMENT_MODE=false \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
 COPY --from=builder /packages /packages
 COPY . .

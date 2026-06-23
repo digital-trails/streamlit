@@ -20,7 +20,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to ACR
-        run: az acr login --name trailstestcontainerapp2
+        run: az acr login --name trailscontainerregistry
 
       - name: Deploy to Container Apps
         uses: azure/container-apps-deploy-action@v1

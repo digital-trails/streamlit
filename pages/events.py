@@ -33,7 +33,7 @@ else:
             y=alt.Y("linking_code:O", axis=alt.Axis(grid=True)),
             color=alt.Color(
                 "event:N",
-                legend=alt.Legend(orient="bottom", columns=6, title="event"),
+                legend=alt.Legend(orient="bottom", columns=5, title="event"),
             ),
             opacity=alt.condition(legend_sel, alt.value(0.9), alt.value(0.1)),
             tooltip=["date:T", "linking_code:Q", "event:N"],

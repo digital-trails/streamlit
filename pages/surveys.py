@@ -10,7 +10,7 @@ study = st.session_state.get("study")
 st.title("Surveys")
 
 datums = load_data(study)
-flows = completed_flow_values(datums)
+flows = completed_flow_values(datums, only_completed=False)
 
 if flows is None or flows.empty:
     st.text("No data is available")

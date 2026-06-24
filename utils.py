@@ -66,10 +66,15 @@ def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_na
 
     return flows[(~flows["name"].isnull())] if only_named else flows
 
-def consents_as_flows(df: pd.DataFrame):
+def consents_as_events(df: pd.DataFrame):
     df2 = df[df["type"]=="Consent"].copy()
-    df2["flow_name"] = "consent"
-    return df2[["flow_name","linking_code","date"]]
+    df2["event"] = "consent"
+    return df2[["event","linking_code","date"]]
+
+def invites_as_events(df: pd.DataFrame):
+    df2 = df[df["type"]=="Invited"].copy()
+    df2["event"] = "invite"
+    return df2[["event","linking_code","date"]]
 
 def to_local_naive(dt, offset_str):
     from datetime import timezone, timedelta

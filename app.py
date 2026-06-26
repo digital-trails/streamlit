@@ -15,6 +15,7 @@ st.set_page_config(page_title="Trails Dashboard", layout="wide")
 pages = [
     st.Page("pages/events.py", title="Events"),
     st.Page("pages/surveys.py", title="Surveys"),
+    st.Page("pages/signins.py", title="Sign-ins"),
     *study_pages(get_study())
 ]
 

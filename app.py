@@ -16,6 +16,7 @@ pages = [
     st.Page("pages/events.py", title="Events"),
     st.Page("pages/surveys.py", title="Surveys"),
     st.Page("pages/signins.py", title="Sign-ins"),
+    st.Page("pages/probes.py", title="Probes"),
     *study_pages(get_study())
 ]
 

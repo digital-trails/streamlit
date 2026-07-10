@@ -69,11 +69,11 @@ def color_map(codes) -> dict:
 
 def pick_participant(sub: pd.DataFrame, key: str) -> pd.DataFrame:
     """For high-frequency probes, restrict to one participant to keep charts readable."""
-    codes = sorted(sub["linking_code"].unique())
+    codes = sorted(sub["pid"].unique())
     if len(codes) <= 1:
         return sub
     chosen = st.selectbox("Participant", codes, key=key)
-    return sub[sub["linking_code"] == chosen]
+    return sub[sub["pid"] == chosen]
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ def render_location(sub: pd.DataFrame, colors: dict):
     map_df = pd.DataFrame({
         "lat": plotted["latitude"].values,
         "lon": plotted["longitude"].values,
-        "color": plotted["linking_code"].map(colors).values,
+        "color": plotted["pid"].map(colors).values,
     })
     st.map(map_df, latitude="lat", longitude="lon", color="color")
 
@@ -134,8 +134,8 @@ def render_location(sub: pd.DataFrame, colors: dict):
                 .encode(
                     x=alt.X("local:T", title="time"),
                     y=alt.Y("speed:Q", title="speed (m/s)"),
-                    color=alt.Color("linking_code:N", title="participant"),
-                    tooltip=["local:T", "speed:Q", "linking_code:N"],
+                    color=alt.Color("pid:N", title="participant"),
+                    tooltip=["local:T", "speed:Q", "pid:N"],
                 )
                 .interactive()
             )
@@ -209,8 +209,8 @@ def render_battery(sub: pd.DataFrame, colors: dict):
         .encode(
             x=alt.X("local:T", title="time"),
             y=alt.Y("percent:Q", title="battery (%)", scale=alt.Scale(domain=[0, 100])),
-            color=alt.Color("linking_code:N", title="participant"),
-            tooltip=["local:T", "percent:Q", "state:N", "source:N", "linking_code:N"],
+            color=alt.Color("pid:N", title="participant"),
+            tooltip=["local:T", "percent:Q", "state:N", "source:N", "pid:N"],
         )
         .interactive()
     )
@@ -294,7 +294,7 @@ with st.sidebar:
         "Probe", present_types, default=present_types,
         format_func=lambda p: PROBE_LABELS[p],
     )
-    participants = sorted(probes["linking_code"].unique())
+    participants = sorted(probes["pid"].unique())
     selected_pids = st.multiselect("Participant", participants, default=participants)
     min_day, max_day = probes["day"].min(), probes["day"].max()
     date_range = st.date_input(
@@ -302,7 +302,7 @@ with st.sidebar:
     )
 
 f = probes[
-    probes["type"].isin(selected_types) & probes["linking_code"].isin(selected_pids)
+    probes["type"].isin(selected_types) & probes["pid"].isin(selected_pids)
 ]
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     start, end = date_range
@@ -312,12 +312,12 @@ if f.empty:
     st.warning("No probe data matches the selected filters.")
     st.stop()
 
-colors = color_map(f["linking_code"].unique())
+colors = color_map(f["pid"].unique())
 
 # ---- KPIs ----
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Probe datums", f"{len(f):,}")
-k2.metric("Participants", f["linking_code"].nunique())
+k2.metric("Participants", f["pid"].nunique())
 k3.metric("Probe types", f["type"].nunique())
 k4.metric("Days covered", (f["day"].max() - f["day"].min()).days + 1)
 
@@ -357,17 +357,15 @@ hour_chart = (
 )
 st.altair_chart(hour_chart, use_container_width=True)
 
-# ---- Collection context (app state + wake trigger) ----
+# ---- Collection context (foreground vs background) ----
 st.subheader("Collection context")
 st.caption(
-    "Whether each reading was captured with the app in the foreground or after the OS woke it "
-    "in the background — and, when woken, by what trigger. A healthy background pipeline shows "
-    "plenty of background readings via silent-push / background-task triggers, not just "
-    "foreground ones."
+    "Whether each reading was captured with the app in the foreground or while it was in the "
+    "background. Plenty of background readings confirm collection keeps running when the app "
+    "isn't open, not just while it is."
 )
-ctx = extract(f, ["appState", "collectionTrigger"])
+ctx = extract(f, ["appState"])
 ctx["appState"] = ctx["appState"].fillna("unknown")
-ctx["collectionTrigger"] = ctx["collectionTrigger"].fillna("unknown")
 
 bg = int((ctx["appState"] == "background").sum())
 fg = int((ctx["appState"] == "foreground").sum())
@@ -375,71 +373,47 @@ m1, m2 = st.columns(2)
 m1.metric("Background readings", f"{bg:,}", f"{bg / len(ctx):.0%} of total")
 m2.metric("Foreground readings", f"{fg:,}", f"{fg / len(ctx):.0%} of total")
 
-ctx_col1, ctx_col2 = st.columns(2)
-with ctx_col1:
-    st.caption("Readings by app state")
-    by_state = ctx.groupby("appState").size().reset_index(name="count")
-    state_chart = (
-        alt.Chart(by_state)
-        .mark_bar()
-        .encode(
-            x=alt.X("count:Q", title="readings"),
-            y=alt.Y("appState:N", sort="-x", title="app state"),
-            color=alt.Color("appState:N", legend=None),
-            tooltip=["appState:N", "count:Q"],
-        )
+st.caption("Readings by app state")
+by_state = ctx.groupby("appState").size().reset_index(name="count")
+state_chart = (
+    alt.Chart(by_state)
+    .mark_bar()
+    .encode(
+        x=alt.X("count:Q", title="readings"),
+        y=alt.Y("appState:N", sort="-x", title="app state"),
+        color=alt.Color("appState:N", legend=None),
+        tooltip=["appState:N", "count:Q"],
     )
-    st.altair_chart(state_chart, use_container_width=True)
-with ctx_col2:
-    st.caption("Readings by wake trigger")
-    by_trigger = ctx.groupby("collectionTrigger").size().reset_index(name="count")
-    trigger_chart = (
-        alt.Chart(by_trigger)
-        .mark_bar()
-        .encode(
-            x=alt.X("count:Q", title="readings"),
-            y=alt.Y("collectionTrigger:N", sort="-x", title="trigger"),
-            color=alt.Color("collectionTrigger:N", legend=None),
-            tooltip=["collectionTrigger:N", "count:Q"],
-        )
-    )
-    st.altair_chart(trigger_chart, use_container_width=True)
-
-st.caption("Background readings over time by trigger — confirms collection continues around the clock.")
-bg_over_time = (
-    ctx[ctx["appState"] == "background"]
-    .groupby(["day", "collectionTrigger"])
-    .size()
-    .reset_index(name="count")
 )
-if bg_over_time.empty:
-    st.info("No background readings in the current selection yet.")
-else:
-    bg_area = (
-        alt.Chart(bg_over_time)
-        .mark_area(opacity=0.75)
-        .encode(
-            x=alt.X("day:T", title="day"),
-            y=alt.Y("count:Q", title="background readings", stack=True),
-            color=alt.Color("collectionTrigger:N", title="trigger"),
-            tooltip=["day:T", "collectionTrigger:N", "count:Q"],
-        )
-        .properties(height=240)
+st.altair_chart(state_chart, use_container_width=True)
+
+st.caption("Readings over time by app state — confirms background collection continues around the clock.")
+state_over_time = ctx.groupby(["day", "appState"]).size().reset_index(name="count")
+state_area = (
+    alt.Chart(state_over_time)
+    .mark_area(opacity=0.75)
+    .encode(
+        x=alt.X("day:T", title="day"),
+        y=alt.Y("count:Q", title="readings", stack=True),
+        color=alt.Color("appState:N", title="app state"),
+        tooltip=["day:T", "appState:N", "count:Q"],
     )
-    st.altair_chart(bg_area, use_container_width=True)
+    .properties(height=240)
+)
+st.altair_chart(state_area, use_container_width=True)
 
 # ---- Participant coverage ----
 st.subheader("Participant coverage")
 st.caption("Readings per participant per day — gaps reveal who has stopped collecting.")
-coverage = f.groupby(["linking_code", "day"]).size().reset_index(name="count")
+coverage = f.groupby(["pid", "day"]).size().reset_index(name="count")
 heat = (
     alt.Chart(coverage)
     .mark_rect()
     .encode(
         x=alt.X("day:T", title="day"),
-        y=alt.Y("linking_code:O", title="participant"),
+        y=alt.Y("pid:O", title="participant"),
         color=alt.Color("count:Q", title="readings", scale=alt.Scale(scheme="viridis")),
-        tooltip=["linking_code:O", "day:T", "count:Q"],
+        tooltip=["pid:O", "day:T", "count:Q"],
     )
     .properties(height=alt.Step(18))
 )
@@ -454,9 +428,9 @@ for tab, ptype in zip(tabs, selected_types):
 
 # ---- Raw data ----
 with st.expander("Raw probe datums"):
-    raw = extract(f, ["appState", "collectionTrigger"])
+    raw = extract(f, ["appState"])
     table = (
-        raw[["local", "linking_code", "type", "appState", "collectionTrigger", "data"]]
+        raw[["local", "pid", "type", "appState", "data"]]
         .sort_values("local", ascending=False)
         .rename(columns={"local": "time"})
         .reset_index(drop=True)

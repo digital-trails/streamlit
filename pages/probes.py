@@ -285,6 +285,12 @@ probes["local"] = local_time(probes)
 probes["day"] = probes["local"].dt.date
 probes["hour"] = probes["local"].dt.hour
 
+# Map each participant to their device platform (iOS / Android) from the "Device" datum, so the
+# timeline can compare collection behaviour across OSes.
+_device_rows = datums[datums["type"] == "Device"]
+pid_platform = {r.pid: (r.data or {}).get("OS", "unknown") for r in _device_rows.itertuples(index=False)}
+probes["platform"] = probes["pid"].map(pid_platform).fillna("unknown")
+
 present_types = [p for p in PROBE_TYPES if p in set(probes["type"])]
 
 # ---- Filters ----
@@ -336,6 +342,57 @@ area = (
     .properties(height=280)
 )
 st.altair_chart(area, use_container_width=True)
+
+# ---- Collection timeline (density over time, by platform) ----
+st.subheader("Collection timeline")
+st.caption(
+    "Datums per time bucket, split by platform. Foregrounded, both platforms should show a "
+    "steady stream. Backgrounded, Android (foreground service) stays steady while iOS collects "
+    "in bursts — one per silent push (~5 min apart). Pan/zoom to inspect the spacing; narrow the "
+    "date range to a single session for the clearest view."
+)
+
+bucket = st.radio(
+    "Bucket size", ["30s", "1min", "5min", "15min"], index=1, horizontal=True, key="timeline_bucket"
+)
+
+tl = f.dropna(subset=["local"])[["local", "platform"]].copy()
+tl["bucket"] = tl["local"].dt.floor(bucket)
+timeline = tl.groupby(["bucket", "platform"]).size().reset_index(name="count")
+
+if timeline.empty:
+    st.info("No timestamped datums in the current selection.")
+else:
+    # Zero-fill missing buckets so background gaps show as drops to zero rather than being
+    # bridged by the line. Guarded so a wide date range at a fine bucket can't explode.
+    buckets = pd.date_range(timeline["bucket"].min(), timeline["bucket"].max(), freq=bucket)
+    platforms = sorted(timeline["platform"].unique())
+    grid_size = len(buckets) * len(platforms)
+
+    step = {}
+    if grid_size <= MAX_TIMESERIES_POINTS:
+        idx = pd.MultiIndex.from_product([buckets, platforms], names=["bucket", "platform"])
+        timeline = timeline.set_index(["bucket", "platform"]).reindex(idx, fill_value=0).reset_index()
+        step = {"interpolate": "step-after"}
+    else:
+        st.caption(
+            f"⚠️ {grid_size:,} buckets exceed the render cap, so gaps aren't zero-filled here. "
+            "Narrow the date range or pick a larger bucket to see the interval pattern clearly."
+        )
+
+    timeline_chart = (
+        alt.Chart(timeline)
+        .mark_line(opacity=0.85, **step)
+        .encode(
+            x=alt.X("bucket:T", title="time"),
+            y=alt.Y("count:Q", title=f"datums per {bucket}"),
+            color=alt.Color("platform:N", title="platform"),
+            tooltip=["bucket:T", "platform:N", "count:Q"],
+        )
+        .properties(height=320)
+        .interactive()
+    )
+    st.altair_chart(timeline_chart, use_container_width=True)
 
 # ---- Time-of-day (background sanity check) ----
 st.subheader("Time-of-day distribution")
@@ -430,7 +487,7 @@ for tab, ptype in zip(tabs, selected_types):
 with st.expander("Raw probe datums"):
     raw = extract(f, ["appState"])
     table = (
-        raw[["local", "pid", "type", "appState", "data"]]
+        raw[["local", "pid", "platform", "type", "appState", "data"]]
         .sort_values("local", ascending=False)
         .rename(columns={"local": "time"})
         .reset_index(drop=True)

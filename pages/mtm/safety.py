@@ -1,6 +1,6 @@
 import streamlit as st
 from auth import check_access_admin_only
-from utils import load_data, completed_flow_values
+from utils import load_datums, completed_flow_values
 
 check_access_admin_only()
 
@@ -8,7 +8,7 @@ study = st.session_state.get("study")
 
 st.title("Safety")
 
-flows = completed_flow_values(load_data(study))
+flows = completed_flow_values(load_datums(study))
 
 dep_names = [f"neuroqol_dep_{i}" for i in range(1,9)]
 anx_names = [f"neuroqol_anx_{i}" for i in range(1,9)]

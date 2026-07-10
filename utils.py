@@ -6,7 +6,7 @@ from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
 
 @st.cache_data(ttl=300)
-def load_data(study: str) -> pd.DataFrame:
+def load_datums(study: str) -> pd.DataFrame:
     try:
         credential = DefaultAzureCredential()
         accesstoken = credential.get_token("https://storage.azure.com/.default")
@@ -15,6 +15,7 @@ def load_data(study: str) -> pd.DataFrame:
         df = dt.to_pandas()
 
         df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
+        df["date"] = df.apply(lambda r: to_local_naive(r['date'], r['tz']), axis=1)
 
         df["data"] = df["data"].apply(_parse)
 
@@ -49,9 +50,9 @@ def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_na
 
     flow_names = flows[flows["data"].apply(lambda d: d.get("name") == "$RootPath")].copy()
     flow_names["flow_name"] = flow_names["data"].apply(lambda d: d["value"][d["value"][:-1].rfind("/")+1:].strip("/").replace(".json",""))
-    flow_names["date"] = pd.to_datetime(flow_names['ts'],unit='s').dt.date
 
-    flows = flows.merge(flow_names[["flow_id","flow_name"]], on = "flow_id")
+    flows = flows.drop(["date"],axis=1)
+    flows = flows.merge(flow_names[["flow_id","flow_name","date"]], on="flow_id")
 
     flows["name"]  = flows["data"].apply(lambda d: d.get("name"))
     flows["value"] = flows["data"].apply(lambda d: d.get("value"))

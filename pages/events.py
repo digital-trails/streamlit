@@ -2,23 +2,23 @@ import altair as alt
 import streamlit as st
 import pandas as pd
 from auth import check_access_admin_only
-from utils import load_data, to_local_naive, completed_flow_values, consents_as_events, invites_as_events
+from utils import load_datums, completed_flow_values, consents_as_events, invites_as_events
 
 check_access_admin_only()
 
 study = st.session_state.get("study")
-datums = load_data(study)
+datums = load_datums(study)
 
 st.title("Events")
 
 if datums is None or datums.empty:
     st.text("No data is available")
+
 else:
-    datums["date"] = datums.apply(lambda r: to_local_naive(r['date'], r['tz']), axis=1)
-    flows = completed_flow_values(datums, only_completed=False)\
-        .groupby(["flow_name","flow_id","linking_code"])["date"].min()\
-        .reset_index(drop=False)\
-        .rename(columns={"flow_name": "event"})[["event","linking_code","date"]]
+    flows = completed_flow_values(datums, only_completed=False)
+    flows = flows[["flow_name","flow_id","linking_code","date"]].drop_duplicates().reset_index()
+    flows = flows.rename(columns={"flow_name": "event"})[["event","linking_code","date"]]
+
     consents = consents_as_events(datums)
     invites = invites_as_events(datums)
     events = pd.concat([flows, consents, invites])

@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from auth import check_access_admin_only
-from utils import load_data, completed_flow_values, consents_as_events, invites_as_events
+from utils import load_datums, completed_flow_values, consents_as_events, invites_as_events
 
 check_access_admin_only()
 
@@ -16,12 +16,11 @@ def index_typ(df):
             yield f"track your progress {min(i,4)}"
 
 study = st.session_state.get("study")
-data = load_data(study)
+data = load_datums(study)
 
-flows = completed_flow_values(data, only_completed=False)\
-    .groupby(["flow_name","flow_id","linking_code"])["date"].min()\
-    .reset_index(drop=False)\
-    .rename(columns={"flow_name": "event"})[["event","linking_code","date"]]
+flows = completed_flow_values(data, only_completed=False)
+flows = flows[["flow_name","flow_id","linking_code","date"]].drop_duplicates().reset_index()
+flows = flows.rename(columns={"flow_name": "event"})[["event","linking_code","date"]]
 
 invites = pd.concat([consents_as_events(data),invites_as_events(data)])
 invites["event"] = "invite"

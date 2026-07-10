@@ -2,7 +2,7 @@ import json
 import streamlit as st
 import pandas as pd
 from auth import check_access_admin_only
-from utils import load_data
+from utils import load_datums
 
 check_access_admin_only()
 study = st.session_state.get("study")
@@ -27,7 +27,7 @@ def parse_oura_rows(df):
     return pd.DataFrame(records)
 
 st.title("Oura Health Data")
-df = parse_oura_rows(load_data(study))
+df = parse_oura_rows(load_datums(study))
 
 if df.empty:
     st.info("No Oura data found for this study.")

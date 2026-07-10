@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from auth import check_access_admin_only
-from utils import load_data
+from utils import load_datums
 
 check_access_admin_only()
 
@@ -270,7 +270,7 @@ RENDERERS = {
 st.title("Probes")
 
 study = st.session_state.get("study")
-datums = load_data(study)
+datums = load_datums(study)
 
 if datums is None or datums.empty:
     st.info("No data is available.")

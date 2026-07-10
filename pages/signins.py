@@ -1,11 +1,11 @@
 import streamlit as st
 from auth import check_access_admin_only
-from utils import load_data, to_local_naive
+from utils import load_datums, to_local_naive
 
 check_access_admin_only()
 
 study = st.session_state.get("study")
-datums = load_data(study)
+datums = load_datums(study)
 
 signins = datums[datums["type"] == "Signed-in"].copy()
 

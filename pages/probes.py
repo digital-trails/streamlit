@@ -419,45 +419,50 @@ st.subheader("Collection context")
 st.caption(
     "Whether each reading was captured with the app in the foreground or while it was in the "
     "background. Plenty of background readings confirm collection keeps running when the app "
-    "isn't open, not just while it is."
+    "isn't open, not just while it is. Readings from before app-state stamping was added are "
+    "excluded."
 )
+# Keep only stamped readings; drop pre-feature datums that have no appState.
 ctx = extract(f, ["appState"])
-ctx["appState"] = ctx["appState"].fillna("unknown")
+ctx = ctx[ctx["appState"].isin(["foreground", "background"])]
 
-bg = int((ctx["appState"] == "background").sum())
-fg = int((ctx["appState"] == "foreground").sum())
-m1, m2 = st.columns(2)
-m1.metric("Background readings", f"{bg:,}", f"{bg / len(ctx):.0%} of total")
-m2.metric("Foreground readings", f"{fg:,}", f"{fg / len(ctx):.0%} of total")
+if ctx.empty:
+    st.info("No app-state–stamped readings in the current selection yet.")
+else:
+    bg = int((ctx["appState"] == "background").sum())
+    fg = int((ctx["appState"] == "foreground").sum())
+    m1, m2 = st.columns(2)
+    m1.metric("Background readings", f"{bg:,}", f"{bg / len(ctx):.0%} of stamped")
+    m2.metric("Foreground readings", f"{fg:,}", f"{fg / len(ctx):.0%} of stamped")
 
-st.caption("Readings by app state")
-by_state = ctx.groupby("appState").size().reset_index(name="count")
-state_chart = (
-    alt.Chart(by_state)
-    .mark_bar()
-    .encode(
-        x=alt.X("count:Q", title="readings"),
-        y=alt.Y("appState:N", sort="-x", title="app state"),
-        color=alt.Color("appState:N", legend=None),
-        tooltip=["appState:N", "count:Q"],
+    st.caption("Readings by app state")
+    by_state = ctx.groupby("appState").size().reset_index(name="count")
+    state_chart = (
+        alt.Chart(by_state)
+        .mark_bar()
+        .encode(
+            x=alt.X("count:Q", title="readings"),
+            y=alt.Y("appState:N", sort="-x", title="app state"),
+            color=alt.Color("appState:N", legend=None),
+            tooltip=["appState:N", "count:Q"],
+        )
     )
-)
-st.altair_chart(state_chart, use_container_width=True)
+    st.altair_chart(state_chart, use_container_width=True)
 
-st.caption("Readings over time by app state — confirms background collection continues around the clock.")
-state_over_time = ctx.groupby(["day", "appState"]).size().reset_index(name="count")
-state_area = (
-    alt.Chart(state_over_time)
-    .mark_area(opacity=0.75)
-    .encode(
-        x=alt.X("day:T", title="day"),
-        y=alt.Y("count:Q", title="readings", stack=True),
-        color=alt.Color("appState:N", title="app state"),
-        tooltip=["day:T", "appState:N", "count:Q"],
+    st.caption("Readings over time by app state — confirms background collection continues around the clock.")
+    state_over_time = ctx.groupby(["day", "appState"]).size().reset_index(name="count")
+    state_area = (
+        alt.Chart(state_over_time)
+        .mark_area(opacity=0.75)
+        .encode(
+            x=alt.X("day:T", title="day"),
+            y=alt.Y("count:Q", title="readings", stack=True),
+            color=alt.Color("appState:N", title="app state"),
+            tooltip=["day:T", "appState:N", "count:Q"],
+        )
+        .properties(height=240)
     )
-    .properties(height=240)
-)
-st.altair_chart(state_area, use_container_width=True)
+    st.altair_chart(state_area, use_container_width=True)
 
 # ---- Participant coverage ----
 st.subheader("Participant coverage")

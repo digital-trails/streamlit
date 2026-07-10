@@ -357,6 +357,77 @@ hour_chart = (
 )
 st.altair_chart(hour_chart, use_container_width=True)
 
+# ---- Collection context (app state + wake trigger) ----
+st.subheader("Collection context")
+st.caption(
+    "Whether each reading was captured with the app in the foreground or after the OS woke it "
+    "in the background — and, when woken, by what trigger. A healthy background pipeline shows "
+    "plenty of background readings via silent-push / background-task triggers, not just "
+    "foreground ones."
+)
+ctx = extract(f, ["appState", "collectionTrigger"])
+ctx["appState"] = ctx["appState"].fillna("unknown")
+ctx["collectionTrigger"] = ctx["collectionTrigger"].fillna("unknown")
+
+bg = int((ctx["appState"] == "background").sum())
+fg = int((ctx["appState"] == "foreground").sum())
+m1, m2 = st.columns(2)
+m1.metric("Background readings", f"{bg:,}", f"{bg / len(ctx):.0%} of total")
+m2.metric("Foreground readings", f"{fg:,}", f"{fg / len(ctx):.0%} of total")
+
+ctx_col1, ctx_col2 = st.columns(2)
+with ctx_col1:
+    st.caption("Readings by app state")
+    by_state = ctx.groupby("appState").size().reset_index(name="count")
+    state_chart = (
+        alt.Chart(by_state)
+        .mark_bar()
+        .encode(
+            x=alt.X("count:Q", title="readings"),
+            y=alt.Y("appState:N", sort="-x", title="app state"),
+            color=alt.Color("appState:N", legend=None),
+            tooltip=["appState:N", "count:Q"],
+        )
+    )
+    st.altair_chart(state_chart, use_container_width=True)
+with ctx_col2:
+    st.caption("Readings by wake trigger")
+    by_trigger = ctx.groupby("collectionTrigger").size().reset_index(name="count")
+    trigger_chart = (
+        alt.Chart(by_trigger)
+        .mark_bar()
+        .encode(
+            x=alt.X("count:Q", title="readings"),
+            y=alt.Y("collectionTrigger:N", sort="-x", title="trigger"),
+            color=alt.Color("collectionTrigger:N", legend=None),
+            tooltip=["collectionTrigger:N", "count:Q"],
+        )
+    )
+    st.altair_chart(trigger_chart, use_container_width=True)
+
+st.caption("Background readings over time by trigger — confirms collection continues around the clock.")
+bg_over_time = (
+    ctx[ctx["appState"] == "background"]
+    .groupby(["day", "collectionTrigger"])
+    .size()
+    .reset_index(name="count")
+)
+if bg_over_time.empty:
+    st.info("No background readings in the current selection yet.")
+else:
+    bg_area = (
+        alt.Chart(bg_over_time)
+        .mark_area(opacity=0.75)
+        .encode(
+            x=alt.X("day:T", title="day"),
+            y=alt.Y("count:Q", title="background readings", stack=True),
+            color=alt.Color("collectionTrigger:N", title="trigger"),
+            tooltip=["day:T", "collectionTrigger:N", "count:Q"],
+        )
+        .properties(height=240)
+    )
+    st.altair_chart(bg_area, use_container_width=True)
+
 # ---- Participant coverage ----
 st.subheader("Participant coverage")
 st.caption("Readings per participant per day — gaps reveal who has stopped collecting.")
@@ -383,8 +454,9 @@ for tab, ptype in zip(tabs, selected_types):
 
 # ---- Raw data ----
 with st.expander("Raw probe datums"):
+    raw = extract(f, ["appState", "collectionTrigger"])
     table = (
-        f[["local", "linking_code", "type", "data"]]
+        raw[["local", "linking_code", "type", "appState", "collectionTrigger", "data"]]
         .sort_values("local", ascending=False)
         .rename(columns={"local": "time"})
         .reset_index(drop=True)

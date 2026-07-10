@@ -69,11 +69,11 @@ def color_map(codes) -> dict:
 
 def pick_participant(sub: pd.DataFrame, key: str) -> pd.DataFrame:
     """For high-frequency probes, restrict to one participant to keep charts readable."""
-    codes = sorted(sub["linking_code"].unique())
+    codes = sorted(sub["pid"].unique())
     if len(codes) <= 1:
         return sub
     chosen = st.selectbox("Participant", codes, key=key)
-    return sub[sub["linking_code"] == chosen]
+    return sub[sub["pid"] == chosen]
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ def render_location(sub: pd.DataFrame, colors: dict):
     map_df = pd.DataFrame({
         "lat": plotted["latitude"].values,
         "lon": plotted["longitude"].values,
-        "color": plotted["linking_code"].map(colors).values,
+        "color": plotted["pid"].map(colors).values,
     })
     st.map(map_df, latitude="lat", longitude="lon", color="color")
 
@@ -134,8 +134,8 @@ def render_location(sub: pd.DataFrame, colors: dict):
                 .encode(
                     x=alt.X("local:T", title="time"),
                     y=alt.Y("speed:Q", title="speed (m/s)"),
-                    color=alt.Color("linking_code:N", title="participant"),
-                    tooltip=["local:T", "speed:Q", "linking_code:N"],
+                    color=alt.Color("pid:N", title="participant"),
+                    tooltip=["local:T", "speed:Q", "pid:N"],
                 )
                 .interactive()
             )
@@ -209,8 +209,8 @@ def render_battery(sub: pd.DataFrame, colors: dict):
         .encode(
             x=alt.X("local:T", title="time"),
             y=alt.Y("percent:Q", title="battery (%)", scale=alt.Scale(domain=[0, 100])),
-            color=alt.Color("linking_code:N", title="participant"),
-            tooltip=["local:T", "percent:Q", "state:N", "source:N", "linking_code:N"],
+            color=alt.Color("pid:N", title="participant"),
+            tooltip=["local:T", "percent:Q", "state:N", "source:N", "pid:N"],
         )
         .interactive()
     )
@@ -285,6 +285,12 @@ probes["local"] = local_time(probes)
 probes["day"] = probes["local"].dt.date
 probes["hour"] = probes["local"].dt.hour
 
+# Map each participant to their device platform (iOS / Android) from the "Device" datum, so the
+# timeline can compare collection behaviour across OSes.
+_device_rows = datums[datums["type"] == "Device"]
+pid_platform = {r.pid: (r.data or {}).get("OS", "unknown") for r in _device_rows.itertuples(index=False)}
+probes["platform"] = probes["pid"].map(pid_platform).fillna("unknown")
+
 present_types = [p for p in PROBE_TYPES if p in set(probes["type"])]
 
 # ---- Filters ----
@@ -294,7 +300,7 @@ with st.sidebar:
         "Probe", present_types, default=present_types,
         format_func=lambda p: PROBE_LABELS[p],
     )
-    participants = sorted(probes["linking_code"].unique())
+    participants = sorted(probes["pid"].unique())
     selected_pids = st.multiselect("Participant", participants, default=participants)
     min_day, max_day = probes["day"].min(), probes["day"].max()
     date_range = st.date_input(
@@ -302,7 +308,7 @@ with st.sidebar:
     )
 
 f = probes[
-    probes["type"].isin(selected_types) & probes["linking_code"].isin(selected_pids)
+    probes["type"].isin(selected_types) & probes["pid"].isin(selected_pids)
 ]
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     start, end = date_range
@@ -312,12 +318,12 @@ if f.empty:
     st.warning("No probe data matches the selected filters.")
     st.stop()
 
-colors = color_map(f["linking_code"].unique())
+colors = color_map(f["pid"].unique())
 
 # ---- KPIs ----
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Probe datums", f"{len(f):,}")
-k2.metric("Participants", f["linking_code"].nunique())
+k2.metric("Participants", f["pid"].nunique())
 k3.metric("Probe types", f["type"].nunique())
 k4.metric("Days covered", (f["day"].max() - f["day"].min()).days + 1)
 
@@ -336,6 +342,57 @@ area = (
     .properties(height=280)
 )
 st.altair_chart(area, use_container_width=True)
+
+# ---- Collection timeline (density over time, by platform) ----
+st.subheader("Collection timeline")
+st.caption(
+    "Datums per time bucket, split by platform. Foregrounded, both platforms should show a "
+    "steady stream. Backgrounded, Android (foreground service) stays steady while iOS collects "
+    "in bursts — one per silent push (~5 min apart). Pan/zoom to inspect the spacing; narrow the "
+    "date range to a single session for the clearest view."
+)
+
+bucket = st.radio(
+    "Bucket size", ["30s", "1min", "5min", "15min"], index=1, horizontal=True, key="timeline_bucket"
+)
+
+tl = f.dropna(subset=["local"])[["local", "platform"]].copy()
+tl["bucket"] = tl["local"].dt.floor(bucket)
+timeline = tl.groupby(["bucket", "platform"]).size().reset_index(name="count")
+
+if timeline.empty:
+    st.info("No timestamped datums in the current selection.")
+else:
+    # Zero-fill missing buckets so background gaps show as drops to zero rather than being
+    # bridged by the line. Guarded so a wide date range at a fine bucket can't explode.
+    buckets = pd.date_range(timeline["bucket"].min(), timeline["bucket"].max(), freq=bucket)
+    platforms = sorted(timeline["platform"].unique())
+    grid_size = len(buckets) * len(platforms)
+
+    step = {}
+    if grid_size <= MAX_TIMESERIES_POINTS:
+        idx = pd.MultiIndex.from_product([buckets, platforms], names=["bucket", "platform"])
+        timeline = timeline.set_index(["bucket", "platform"]).reindex(idx, fill_value=0).reset_index()
+        step = {"interpolate": "step-after"}
+    else:
+        st.caption(
+            f"⚠️ {grid_size:,} buckets exceed the render cap, so gaps aren't zero-filled here. "
+            "Narrow the date range or pick a larger bucket to see the interval pattern clearly."
+        )
+
+    timeline_chart = (
+        alt.Chart(timeline)
+        .mark_line(opacity=0.85, **step)
+        .encode(
+            x=alt.X("bucket:T", title="time"),
+            y=alt.Y("count:Q", title=f"datums per {bucket}"),
+            color=alt.Color("platform:N", title="platform"),
+            tooltip=["bucket:T", "platform:N", "count:Q"],
+        )
+        .properties(height=320)
+        .interactive()
+    )
+    st.altair_chart(timeline_chart, use_container_width=True)
 
 # ---- Time-of-day (background sanity check) ----
 st.subheader("Time-of-day distribution")
@@ -357,18 +414,68 @@ hour_chart = (
 )
 st.altair_chart(hour_chart, use_container_width=True)
 
+# ---- Collection context (foreground vs background) ----
+st.subheader("Collection context")
+st.caption(
+    "Whether each reading was captured with the app in the foreground or while it was in the "
+    "background. Plenty of background readings confirm collection keeps running when the app "
+    "isn't open, not just while it is. Readings from before app-state stamping was added are "
+    "excluded."
+)
+# Keep only stamped readings; drop pre-feature datums that have no appState.
+ctx = extract(f, ["appState"])
+ctx = ctx[ctx["appState"].isin(["foreground", "background"])]
+
+if ctx.empty:
+    st.info("No app-state–stamped readings in the current selection yet.")
+else:
+    bg = int((ctx["appState"] == "background").sum())
+    fg = int((ctx["appState"] == "foreground").sum())
+    m1, m2 = st.columns(2)
+    m1.metric("Background readings", f"{bg:,}", f"{bg / len(ctx):.0%} of stamped")
+    m2.metric("Foreground readings", f"{fg:,}", f"{fg / len(ctx):.0%} of stamped")
+
+    st.caption("Readings by app state")
+    by_state = ctx.groupby("appState").size().reset_index(name="count")
+    state_chart = (
+        alt.Chart(by_state)
+        .mark_bar()
+        .encode(
+            x=alt.X("count:Q", title="readings"),
+            y=alt.Y("appState:N", sort="-x", title="app state"),
+            color=alt.Color("appState:N", legend=None),
+            tooltip=["appState:N", "count:Q"],
+        )
+    )
+    st.altair_chart(state_chart, use_container_width=True)
+
+    st.caption("Readings over time by app state — confirms background collection continues around the clock.")
+    state_over_time = ctx.groupby(["day", "appState"]).size().reset_index(name="count")
+    state_area = (
+        alt.Chart(state_over_time)
+        .mark_area(opacity=0.75)
+        .encode(
+            x=alt.X("day:T", title="day"),
+            y=alt.Y("count:Q", title="readings", stack=True),
+            color=alt.Color("appState:N", title="app state"),
+            tooltip=["day:T", "appState:N", "count:Q"],
+        )
+        .properties(height=240)
+    )
+    st.altair_chart(state_area, use_container_width=True)
+
 # ---- Participant coverage ----
 st.subheader("Participant coverage")
 st.caption("Readings per participant per day — gaps reveal who has stopped collecting.")
-coverage = f.groupby(["linking_code", "day"]).size().reset_index(name="count")
+coverage = f.groupby(["pid", "day"]).size().reset_index(name="count")
 heat = (
     alt.Chart(coverage)
     .mark_rect()
     .encode(
         x=alt.X("day:T", title="day"),
-        y=alt.Y("linking_code:O", title="participant"),
+        y=alt.Y("pid:O", title="participant"),
         color=alt.Color("count:Q", title="readings", scale=alt.Scale(scheme="viridis")),
-        tooltip=["linking_code:O", "day:T", "count:Q"],
+        tooltip=["pid:O", "day:T", "count:Q"],
     )
     .properties(height=alt.Step(18))
 )
@@ -383,8 +490,9 @@ for tab, ptype in zip(tabs, selected_types):
 
 # ---- Raw data ----
 with st.expander("Raw probe datums"):
+    raw = extract(f, ["appState"])
     table = (
-        f[["local", "linking_code", "type", "data"]]
+        raw[["local", "pid", "platform", "type", "appState", "data"]]
         .sort_values("local", ascending=False)
         .rename(columns={"local": "time"})
         .reset_index(drop=True)

@@ -26,6 +26,7 @@ invites = pd.concat([consents_as_events(data),invites_as_events(data)])
 invites["event"] = "invite"
 
 starts = enrolled_as_events(data)
+starts["event"] = "start"
 
 is_intro = flows['event'] == "intro"
 is_TYP   = flows['event'].str.startswith("track your progress")
@@ -37,7 +38,7 @@ compliance_events["date"]  = compliance_events["date"].dt.date
 
 compliance_events = compliance_events.sort_values(["linking_code","date","event"]).groupby(['linking_code',"event"]).tail(1)
 
-column_order = ["invite","intro","track your progress 1","track your progress 2","track your progress 3","track your progress 4"]
+column_order = ["invite","start","intro","track your progress 1","track your progress 2","track your progress 3","track your progress 4"]
 
 st.title("Compliance")
 st.write(compliance_events.pivot(columns="event",index="linking_code",values="date")[column_order])

@@ -6,7 +6,7 @@ ROLES_API = "https://digital-trails.org/api/v2.1/roles?resource=study:{study}"
 @st.cache_data(ttl=300)
 def fetch_roles(study: str, token: str) -> list[str]:
     url = ROLES_API.format(study=study)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}", "x-portal": "True"}
 
     resp = requests.get(url, headers=headers)
     if resp.status_code != 200:

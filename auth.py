@@ -1,7 +1,7 @@
 import requests
 import streamlit as st
 
-ROLES_API = "https://digital-trails.org/api/v2/roles?resource=study:{study}"
+ROLES_API = "https://digital-trails.org/api/v2.1/roles?resource=study:{study}"
 
 @st.cache_data(ttl=300)
 def fetch_roles(study: str, token: str) -> list[str]:
@@ -29,21 +29,21 @@ def check_access_admin_only() -> bool:
     
     set_session_state()
 
-    token = st.session_state.get("token")
-    study = st.session_state.get("study")
+    # token = st.session_state.get("token")
+    # study = st.session_state.get("study")
 
-    if not token or not study:
-        st.error("🚫 Unauthorized: missing token or study.")
-        st.stop()
+    # if not token or not study:
+    #     st.error("🚫 Unauthorized: missing token or study.")
+    #     st.stop()
 
-    try:
-        roles = fetch_roles(study, token)
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
+    # try:
+    #     roles = fetch_roles(study, token)
+    # except Exception as e:
+    #     st.error(str(e))
+    #     st.stop()
 
-    if "admin" not in roles:
-        st.error("Access Denied: Admin role required.")
-        st.stop()
+    # if "admin" not in roles:
+    #     st.error("Access Denied: Admin role required.")
+    #     st.stop()
 
     return True

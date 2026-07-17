@@ -5,7 +5,7 @@ import streamlit as st
 from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
 
-@st.cache_data(ttl=300)
+@st.cache_data
 def load_datums(study: str) -> pd.DataFrame:
     try:
         credential = DefaultAzureCredential()
@@ -34,7 +34,7 @@ def load_datums(study: str) -> pd.DataFrame:
                         row["data"]["value"] = str(int(row["data"]["value"]) + 1)
         return df
     except:
-        return None
+        raise
 
 def completed_flow_values(df: pd.DataFrame, only_completed: bool = True, only_named: bool = True, drop_meta: bool = True):
     
@@ -75,6 +75,11 @@ def consents_as_events(df: pd.DataFrame):
 def invites_as_events(df: pd.DataFrame):
     df2 = df[df["type"]=="Invited"].copy()
     df2["event"] = "invite"
+    return df2[["event","linking_code","date"]]
+
+def enrolled_as_events(df: pd.DataFrame):
+    df2 = df[df["type"]=="Enrolled"].copy()
+    df2["event"] = "Start"
     return df2[["event","linking_code","date"]]
 
 def to_local_naive(dt, offset_str):

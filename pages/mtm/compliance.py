@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from auth import check_access_admin_only
-from utils import load_datums, completed_flow_values, consents_as_events, invites_as_events
+from utils import load_datums, completed_flow_values, consents_as_events, invites_as_events, enrolled_as_events
 
 check_access_admin_only()
 
@@ -25,10 +25,12 @@ flows = flows.rename(columns={"flow_name": "event"})[["event","linking_code","da
 invites = pd.concat([consents_as_events(data),invites_as_events(data)])
 invites["event"] = "invite"
 
+starts = enrolled_as_events(data)
+
 is_intro = flows['event'] == "intro"
 is_TYP   = flows['event'].str.startswith("track your progress")
 
-compliance_events = pd.concat([invites,flows[is_intro|is_TYP]]).sort_values(["linking_code","date","event"])
+compliance_events = pd.concat([invites,starts,flows[is_intro|is_TYP]]).sort_values(["linking_code","date","event"])
 
 compliance_events["event"] = list(index_typ(compliance_events))
 compliance_events["date"]  = compliance_events["date"].dt.date

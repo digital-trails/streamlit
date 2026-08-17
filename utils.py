@@ -5,9 +5,10 @@ import streamlit as st
 from deltalake import DeltaTable
 from azure.identity import DefaultAzureCredential
 
-@st.cache_data(ttl=300)
+#@st.cache_data(ttl=300)
 def load_datums(study: str) -> pd.DataFrame:
     try:
+
         credential = DefaultAzureCredential()
         accesstoken = credential.get_token("https://storage.azure.com/.default")
         storage_options = {"ACCOUNT_NAME": "trailsoutputs", "BEARER_TOKEN": accesstoken.token}
